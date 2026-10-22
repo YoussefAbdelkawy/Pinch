@@ -199,12 +199,7 @@ object WidgetRenderer {
         val top = usage?.topModel
         v.setTextViewText(
             R.id.model_value,
-            when {
-                authProblem || usage == null -> context.getString(R.string.no_data)
-                top != null -> "${top.label} · ${top.percent}%"
-                // Signed in, but the account has no separate per-model limit.
-                else -> context.getString(R.string.no_model_limit)
-            }
+            if (top != null && !authProblem) "${top.label} · ${top.percent}%" else context.getString(R.string.no_data)
         )
 
         // ---- footer
@@ -225,7 +220,10 @@ object WidgetRenderer {
         val showWeek = heightDp >= medium
         v.setViewVisibility(R.id.week_row, if (showWeek) View.VISIBLE else View.GONE)
         v.setViewVisibility(R.id.week_bars, if (showWeek) View.VISIBLE else View.GONE)
-        v.setViewVisibility(R.id.model_row, if (heightDp >= full) View.VISIBLE else View.GONE)
+        // Anthropic only reports per-model numbers on plans with per-model limits (Max). On Pro
+        // every model shares one limit, so the row would have nothing true to say: hide it.
+        val hasModels = usage == null || authProblem || usage.models.isNotEmpty()
+        v.setViewVisibility(R.id.model_row, if (heightDp >= full && hasModels) View.VISIBLE else View.GONE)
         v.setViewVisibility(R.id.footer, if (heightDp >= roomy && status != null) View.VISIBLE else View.GONE)
         v.setViewVisibility(R.id.session_row, if (heightDp > tiny) View.VISIBLE else View.GONE)
 
