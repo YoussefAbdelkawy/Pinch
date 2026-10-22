@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Clawd Usage</string>
+    <string name="tagline">Your Claude limits, with a crab.</string>
+    <string name="widget_name">Clawd Usage</string>
+    <string name="widget_description">Session and weekly Claude limits, with Clawd</string>
+    <string name="widget_title">CLAUDE USAGE</string>
+    <string name="clawd">Clawd. Tap him.</string>
+    <string name="refresh">Refresh</string>
+
+    <string name="dash_pct">––%</string>
+    <string name="pct_left">%1$d%% left</string>
+    <string name="session_5h">5-hour session</string>
+    <string name="week">WEEK</string>
+    <string name="top_model">TOP MODEL</string>
+    <string name="resets_in_chrono">resets in %s</string>
+    <string name="resets_span">%1$s · %2$s</string>
+    <string name="not_started">not started</string>
+    <string name="resetting">resetting…</string>
+    <string name="window_not_started">No session running · Clawd is napping</string>
+    <string name="no_data">no data</string>
+    <string name="loading">loading…</string>
+    <string name="no_data_offline">no data yet · offline?</string>
+    <string name="tap_to_sign_in">Tap to sign in with Claude</string>
+    <string name="sign_in_again">Signed out · tap to sign in again</string>
+    <string name="status_ok">All Claude systems operational</string>
+    <string name="offline_since">offline · %s</string>
+    <string name="stale_since">stale · %s</string>
+
+    <string name="tap_clawd">Tap Clawd for a trick</string>
+    <string name="account">Claude account</string>
+    <string name="not_connected">Not connected yet.</string>
+    <string name="connected">Connected ✓</string>
+    <string name="connected_but">Connected, but the last refresh failed: %s</string>
+    <string name="session_expired">Your sign-in expired. Sign in again below.</string>
+    <string name="step1">1. Sign in and approve in your browser.</string>
+    <string name="sign_in">Sign in with Claude</string>
+    <string name="step2">2. Copy the code the page shows, then come back and paste it.</string>
+    <string name="paste_code">Paste the code (leave empty to use the clipboard)</string>
+    <string name="connect">Connect</string>
+    <string name="connecting">Connecting…</string>
+    <string name="refreshing">Refreshing…</string>
+    <string name="refresh_now">Refresh now</string>
+    <string name="sign_out">Sign out</string>
+    <string name="after_approve">After approving, copy the code and paste it below.</string>
+    <string name="no_browser">No browser found to sign in with.</string>
+    <string name="paste_first">Copy the code from the browser first.</string>
+    <string name="start_first">Tap \"Sign in with Claude\" first, then paste the code it gives you.</string>
+
+    <string name="widget">Widget</string>
+    <string name="add_widget">Add the widget to the home screen</string>
+    <string name="add_widget_hint">Or long-press your home screen → Widgets → Clawd Usage. Resize it: smaller sizes hide the extra rows.</string>
+    <string name="add_widget_manual">Long-press your home screen → Widgets → Clawd Usage.</string>
+    <string name="preview_unavailable">Preview unavailable.</string>
+    <string name="theme">Theme</string>
+    <string name="by_season">By season (%s)</string>
+    <string name="skin">Clawd\'s skin</string>
+    <string name="skin_auto">Theme\'s pick</string>
+    <string name="refresh_every">Refresh every</string>
+    <string name="minutes">%d min</string>
+
+    <string name="privacy">Privacy &amp; security</string>
+    <string name="privacy_body">Clawd Usage talks only to Anthropic (api.anthropic.com, platform.claude.com) and the public status page (status.claude.com). No analytics, no ads, no servers of its own.\n\nYour sign-in tokens are encrypted with a key kept in the Android Keystore, never logged, never backed up and never shown. Signing out wipes them from the phone.</string>
+    <string name="disclaimer">v%s · Not affiliated with or endorsed by Anthropic. Clawd art from clawd-usage-winwidget (MIT).</string>
+
+    <string name="err_auth">Claude rejected the code or it expired. Tap Sign in again and use the new code.</string>
+    <string name="err_state">That code belongs to an older sign-in. Tap Sign in with Claude again.</string>
+    <string name="err_rate">Rate limited by Anthropic. Wait a minute and try again.</string>
+    <string name="err_offline">Can\'t reach Anthropic. Check your connection.</string>
+    <string name="err_other">Something went wrong (%s). Try again.</string>
+</resources>

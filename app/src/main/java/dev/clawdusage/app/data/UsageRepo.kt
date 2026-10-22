@@ -1,0 +1,100 @@
+package dev.clawdusage.app.data
+
+import android.content.Context
+import dev.clawdusage.app.auth.ClaudeAuth
+import org.json.JSONObject
+
+/**
+ * Fetches usage and remembers the last good numbers. Only non-secret data lives here
+ * (percentages, reset times, status text) in app-private storage.
+ */
+object UsageRepo {
+
+    private const val USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
+    private const val STATUS_URL = "https://status.claude.com/api/v2/summary.json"
+    private const val PREFS = "usage_cache"
+
+    data class State(
+        val usage: Usage?,
+        /** null, or "auth_error" / "offline" / "rate_limited" / "http_nnn" from the last attempt. */
+        val error: String?,
+        val status: ServiceStatus?,
+        /** The 5-hour window just reset: Clawd celebrates. */
+        val justReset: Boolean = false
+    )
+
+    data class ServiceStatus(val indicator: String, val description: String)
+
+    fun cached(context: Context): State {
+        val p = prefs(context)
+        val usage = p.getString("usage", null)?.let { Usage.fromCache(it) }
+        val status = p.getString("status_indicator", null)?.let {
+            ServiceStatus(it, p.getString("status_desc", "") ?: "")
+        }
+        return State(usage, p.getString("error", null), status)
+    }
+
+    @Synchronized
+    fun refresh(context: Context): State {
+        val before = cached(context)
+        val status = fetchStatus() ?: before.status
+        val result = fetchUsage(context)
+        val p = prefs(context).edit()
+        status?.let { p.putString("status_indicator", it.indicator).putString("status_desc", it.description) }
+
+        if (result.second != null) {
+            p.putString("error", result.second).apply()
+            return before.copy(error = result.second, status = status)
+        }
+        val usage = result.first!!
+        p.putString("usage", usage.toJson()).remove("error").apply()
+
+        // Same rule as Clawd: the reset time moved forward and the percent dropped.
+        val old = before.usage?.session
+        val new = usage.session
+        val reset = old?.resetsAt != null && new != null &&
+            (new.resetsAt == null || new.resetsAt > old.resetsAt) && new.percent < old.percent
+        return State(usage, null, status, justReset = reset)
+    }
+
+    fun clear(context: Context) = prefs(context).edit().clear().commit()
+
+    private fun fetchUsage(context: Context): Pair<Usage?, String?> {
+        val token = ClaudeAuth.accessToken(context) ?: return null to (ClaudeAuth.lastError ?: "auth_error")
+        var r = callUsage(token)
+        if (r.code == 401 || r.code == 403) {
+            val fresh = ClaudeAuth.refresh(context, force = true) ?: return null to (ClaudeAuth.lastError ?: "auth_error")
+            r = callUsage(fresh)
+        }
+        return when {
+            r.code == 200 && r.body != null -> try {
+                Usage.parse(JSONObject(r.body)) to null
+            } catch (_: Exception) {
+                null to "bad_response"
+            }
+            r.code == -1 -> null to "offline"
+            r.code == 401 || r.code == 403 -> null to "auth_error"
+            r.code == 429 || r.body?.contains("rate_limit_error") == true -> null to "rate_limited"
+            else -> null to "http_${r.code}"
+        }
+    }
+
+    private fun callUsage(token: String) = Http.get(
+        USAGE_URL,
+        mapOf("Authorization" to "Bearer $token", "anthropic-beta" to "oauth-2025-04-20")
+    )
+
+    private fun fetchStatus(): ServiceStatus? {
+        val r = Http.get(STATUS_URL)
+        if (r.code != 200 || r.body == null) return null
+        return try {
+            val s = JSONObject(r.body).getJSONObject("status")
+            ServiceStatus(s.optString("indicator", "none"), s.optString("description", ""))
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun prefs(context: Context) =
+        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+}

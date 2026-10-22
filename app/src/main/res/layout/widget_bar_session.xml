@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Level bars stacked; code shows the one matching the level, which works on every Android version. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/session_bars"
+    android:layout_width="match_parent"
+    android:layout_height="6dp"
+    android:layout_marginTop="4dp">
+
+    <ProgressBar
+        android:id="@+id/session_bar_ok"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:max="100"
+        android:progressDrawable="@drawable/bar_ok" />
+
+    <ProgressBar
+        android:id="@+id/session_bar_warn"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:max="100"
+        android:progressDrawable="@drawable/bar_warn"
+        android:visibility="gone" />
+
+    <ProgressBar
+        android:id="@+id/session_bar_crit"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:max="100"
+        android:progressDrawable="@drawable/bar_crit"
+        android:visibility="gone" />
+
+    <ProgressBar
+        android:id="@+id/session_bar_dead"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:max="100"
+        android:progressDrawable="@drawable/bar_dead"
+        android:visibility="gone" />
+</FrameLayout>
