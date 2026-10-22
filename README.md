@@ -14,7 +14,7 @@ A small pixel crab lives on the widget. He walks around a little scene, reacts t
 
 - **Session:** how much of the current 5-hour session you have used, how much is left, and a live countdown to the reset.
 - **Week:** how much of your weekly limit you have used, and when it resets.
-- **Top model:** the model with the highest weekly use, for example Fable or Sonnet.
+- **Top model:** on plans with separate per-model limits (Max), the model you have used most this week, for example Opus or Sonnet. Anthropic does not report per-model use on Pro, where all models share one limit, so the row is hidden there.
 - **Hearts:** three hearts that empty as your session runs out.
 - **Status:** whether Claude is up, from status.claude.com.
 

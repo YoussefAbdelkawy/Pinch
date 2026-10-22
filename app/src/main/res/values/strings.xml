@@ -27,7 +27,6 @@
     <string name="offline_since">offline · %s</string>
     <string name="stale_since">retrying · %s</string>
     <string name="api_changed">Anthropic changed the usage format · update the app</string>
-    <string name="no_model_limit">shared by all models</string>
 
     <string name="tap_clawd">Tap the crab for a trick</string>
     <string name="account">Claude account</string>
