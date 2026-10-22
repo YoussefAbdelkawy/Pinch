@@ -178,11 +178,10 @@ class MainActivity : Activity() {
             box.addView(flow)
         })
 
-        // Privacy.
-        col.addView(header(getString(R.string.privacy)))
-        col.addView(card { box ->
-            box.addView(text(getString(R.string.privacy_body), 13f, theme.text))
-            box.addView(text(getString(R.string.disclaimer, BuildConfig.VERSION_NAME), 12f, theme.muted).apply { setPadding(0, dp(10), 0, 0) })
+        // Footer: version, not affiliated, and the credit the crab art's license asks for.
+        col.addView(text(getString(R.string.disclaimer, BuildConfig.VERSION_NAME), 12f, theme.muted).apply {
+            gravity = Gravity.CENTER
+            setPadding(dp(8), dp(28), dp(8), 0)
         })
 
         val scroll = ScrollView(this).apply {
