@@ -107,9 +107,9 @@ object WidgetRenderer {
         val home = Stage.home(stageW, if (authProblem) null else session?.percent)
         val beats = if (act != null) Stage.act(act, home, stageW) else Stage.loop(mood, halves ?: 6, home, stageW, look.skin.id)
         // The launcher caps a widget's bitmaps at about 1.5 screens of pixels: pick the
-        // sharpest scale that keeps the loop well inside that, else skip every other frame.
+        // sharpest scale that keeps the loop inside 70% of that, else skip every other frame.
         val dm = context.resources.displayMetrics
-        val budget = dm.widthPixels.toLong() * dm.heightPixels * 4 * 3 / 2 / 2
+        val budget = dm.widthPixels.toLong() * dm.heightPixels * 4 * 3 / 2 * 7 / 10
         fun cost(scale: Int, frames: Int) = stageW.toLong() * scale * Scenes.H * scale * 2 * frames
         val scale = (4 downTo 2).firstOrNull { cost(it, beats.size) <= budget } ?: 2
         val stride = if (cost(scale, beats.size) <= budget) 1 else 2

@@ -30,7 +30,8 @@ object Clawd {
         "right" to Arms(" ▐", "▄", "▝▜", "█▘"),
         "left" to Arms("▗▟", "", " ▜", "█▀")
     )
-    private val FEET = mapOf("both" to " ▝▝   ▝▝ ", "left" to " ▝▝      ", "right" to "      ▝▝ ")
+    private val FEET = mapOf("both" to " ▝▝   ▝▝ ", "left" to " ▝▝      ", "right" to "      ▝▝ ",
+        "tucked" to "         ") // sitting: legs folded under him
 
     private class Row(val s: String, val from: Int, val to: Int)
     private val FACING = mapOf(
@@ -157,7 +158,7 @@ object Clawd {
         }
 
         // What the skin holds (pan, laptop, wand, magnifier), while he is upright and above ground.
-        if (!f.flip && f.dig == 0 && f.facing.isEmpty()) Props.draw(dst, skin.id, tick, ox + dx, top + dy)
+        if (!f.flip && f.dig == 0 && f.facing.isEmpty()) Props.draw(dst, skin.id, f, tick, ox + dx, top + dy, oy)
 
         // Dust puffs at the sides while crouched.
         if (f.poof.isNotEmpty() && f.off > 0) {
@@ -296,6 +297,8 @@ data class Frame(
     val sweat: Int = 0,
     val zz: Int = 0,
     val bubble: Char? = null,
-    val confetti: Int = -1
+    val confetti: Int = -1,
+    /** What a skin's prop is doing (see [Props]); 0 is its resting state. */
+    val prop: Int = 0
 )
 

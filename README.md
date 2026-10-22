@@ -47,10 +47,10 @@ You can change these in the app:
 
 - **Theme.** "By season" is the default. It picks Halloween in October, Christmas in December, Valentine in February, Spring from March 20 to May, Summer from June to August, and Classic the rest of the year. You can also pick a theme yourself.
 - **Crab skin.** "Theme's pick" dresses the crab for the theme, for example a witch hat at Halloween. There are 31 skins. Four of them come with their own animation:
-  - **Chef:** flips a pancake.
-  - **Programmer:** types on a laptop next to a cup of coffee.
-  - **Wizard:** has a sparkling wand.
-  - **Detective:** checks things with a magnifying glass.
+  - **Chef:** watches the pan, then tosses the pancake so it flips in the air, and catches it.
+  - **Programmer:** sits on the ground with headphones on, typing on his laptop.
+  - **Wizard:** waves his wand in an arc that leaves sparks, then casts a burst of stars.
+  - **Detective:** smokes a pipe, studies the ground with his magnifying glass, then holds it up to his eye.
 - **Refresh every.** Choose 5, 15, 30 or 60 minutes. The 5-minute option only runs while your phone is awake, so it does not drain the battery. Android may stretch it by a few minutes.
 
 To refresh right away, tap the refresh button on the widget. Tap the crab to see a trick.

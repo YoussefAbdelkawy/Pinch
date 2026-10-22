@@ -14,7 +14,8 @@ import kotlin.math.sign
  */
 object Stage {
     const val FRAME_MS = 100L
-    const val LOOP = 80
+    /** 12 seconds: long enough that things drift across the scene at a calm pace. */
+    const val LOOP = 120
 
     /** Where the crab is (left edge of his canvas, in logical pixels) and how he looks. */
     data class Beat(val x: Int, val f: Frame)
@@ -35,20 +36,9 @@ object Stage {
 
     fun loop(mood: Clawd.Mood, halves: Int, home: Int, w: Int, skinId: String = "", n: Int = LOOP): List<Beat> {
         val b = Builder(home.coerceIn(0, maxX(w)))
-        if (Props.sedentary(skinId) && (mood == Clawd.Mood.IDLE || mood == Clawd.Mood.CRIT)) {
-            // At the keyboard: tapping away, glancing at the screen, the odd blink.
-            val tired = mood == Clawd.Mood.CRIT
-            for (t in 0 until n) {
-                val eyes = when {
-                    t % 27 == 13 -> "blink"
-                    tired -> "focus"
-                    t % 40 in 30..35 -> "open"
-                    else -> "happy"
-                }
-                b.hold(1, Frame(eyes = eyes, arms = if ((t / 2) % 2 == 0) "down" else "right",
-                    look = if (t % 40 in 30..35) 1 else 0, sweat = if (tired) 1 + (t / 2) % 3 else 0))
-            }
-            return b.out
+        if (Props.hasRoutine(skinId) && (mood == Clawd.Mood.IDLE || mood == Clawd.Mood.CRIT)) {
+            routine(b, skinId, mood == Clawd.Mood.CRIT, w, n)
+            return b.out.take(n)
         }
         when (mood) {
             Clawd.Mood.SLEEP -> {
@@ -113,6 +103,81 @@ object Stage {
             }
         }
         return b.out.take(n)
+    }
+
+    /** The skin's own routine: cooking, typing, spell-casting, investigating. Ends where it began. */
+    private fun routine(b: Builder, skinId: String, tired: Boolean, w: Int, n: Int) {
+        val sweat = { t: Int -> if (tired) 1 + (t / 2) % 3 else 0 }
+        val eyes = { e: String -> if (tired && e == "open") "focus" else e }
+        when (skinId) {
+            "chef" -> {
+                // Watches the pan, then tosses: the pan comes up, the pancake flips, he catches it.
+                val cycle = 40
+                while (b.out.size + cycle <= n) {
+                    b.holdFn(8) { t -> Frame(eyes = eyes("open"), look = 1, sweat = sweat(t)) }
+                    b.hold(1, Frame(eyes = "blink", look = 1))
+                    b.holdFn(9) { t -> Frame(eyes = eyes("open"), look = 1, sweat = sweat(t)) }
+                    b.hold(2, Frame(eyes = "focus", look = 1, off = 0, arms = "down"))
+                    for (step in 1..Props.TOSS.size) {
+                        b.hold(1, Frame(eyes = if (step in 4..7) "wide" else "focus", look = 1,
+                            arms = if (step <= 2) "up" else "right", prop = step))
+                    }
+                    b.hold(9, Frame(eyes = "happy", arms = "right"))
+                }
+                b.fill(n) { t -> Frame(eyes = eyes("open"), look = 1, sweat = sweat(t)) }
+            }
+            "programmer" -> {
+                // Sitting on the ground (legs tucked, body down on the sand) at his laptop:
+                // typing, glancing away to think, the odd stretch.
+                val sit = Frame(feet = "tucked", lift = -2)
+                for (t in 0 until n) {
+                    val k = t % 60
+                    val f = when {
+                        k in 50..55 -> sit.copy(arms = "up", eyes = "closed")
+                        k % 23 == 11 -> sit.copy(eyes = "blink", look = 1)
+                        k in 30..35 -> sit.copy(eyes = eyes("open"), look = -1)
+                        else -> sit.copy(eyes = if (tired) "focus" else "happy", look = 1,
+                            arms = if ((t / 2) % 2 == 0) "down" else "right")
+                    }
+                    b.hold(1, f.copy(sweat = sweat(t)))
+                }
+            }
+            "wizard" -> {
+                // Strolls, waves the wand in an arc, and casts; twice per loop.
+                val dir = b.roomyDir(w)
+                val d = min(10, b.room(w, dir))
+                fun cast() {
+                    for (step in 1..Props.WAVE.size) {
+                        b.hold(1, Frame(eyes = "focus", arms = if (Props.WAVE[step - 1] == 1) "up" else "right", prop = step))
+                    }
+                    for (k in 1..Props.CAST) b.hold(1, Frame(eyes = "happy", arms = "right", prop = Props.WAVE.size + k))
+                }
+                b.holdFn(8) { t -> Frame(eyes = eyes("open"), sweat = sweat(t)) }
+                cast()
+                b.hold(4, Frame(look = dir))
+                b.walk(dir * d, every = 1) { t -> Frame(sweat = sweat(t)) }
+                b.hold(3, Frame(eyes = "blink"))
+                cast()
+                b.walk(-dir * d, every = 1) { t -> Frame(sweat = sweat(t)) }
+                b.fill(n) { t -> Frame(eyes = if (t % 13 == 6) "blink" else eyes("open"), sweat = sweat(t)) }
+            }
+            "detective" -> {
+                // Paces slowly, studies the ground, then holds the glass up to his eye.
+                val dir = b.roomyDir(w)
+                val d = min(8, b.room(w, dir))
+                val pace = { t: Int -> Frame(eyes = eyes("open"), sweat = sweat(t)) }
+                b.holdFn(6, pace)
+                b.walk(dir * d, every = 2, base = pace)
+                b.hold(14, Frame(eyes = "focus", look = dir, prop = Props.LENS_GROUND))
+                b.hold(3, Frame(look = dir))
+                for (k in 0 until 18) {
+                    b.hold(1, Frame(eyes = "open", look = if (k < 6) 0 else if (k < 12) -1 else 1, prop = Props.LENS_EYE))
+                }
+                b.hold(3, Frame(eyes = "wide"))
+                b.walk(-dir * d, every = 2, base = pace)
+                b.fill(n) { t -> Frame(eyes = if (t % 17 == 8) "blink" else eyes("open"), sweat = sweat(t)) }
+            }
+        }
     }
 
     /** A one-shot animation (a tap, a celebration) played where he stands, at the stage's frame rate. */
