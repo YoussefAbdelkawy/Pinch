@@ -56,7 +56,7 @@ You can also pick one: Classic, OLED black, Midnight, Space, Underwater or Cyber
 3. Back in the app, tap **Connect**. You can paste the code, or leave the field empty and it reads the clipboard.
 4. Tap **Add the widget to the home screen**, or long-press the home screen → Widgets → Pinch. Resize it as you like: smaller sizes hide the extra rows.
 
-Android 8.0 or newer. It refreshes every 15 minutes by default (you can pick 30 or 60). Tap ⟳ on the widget to refresh now.
+Android 8.0 or newer. It refreshes every 15 minutes by default. You can pick 30 or 60, or **5 minutes**: that one runs only while the phone is awake, so it costs nothing while the phone sleeps, and Android may stretch it by a few minutes to save battery. Tap ⟳ on the widget to refresh now. If the widget is already on your home screen, the app says so; you can still add a second one.
 
 **Verify the APK.** Release APKs are signed with this certificate (SHA-256):
 `39:D7:53:0A:8C:27:D9:C9:0A:B5:35:A9:7C:F2:8C:40:D1:BC:E6:5D:EA:88:A7:BC:58:94:63:26:77:6C:DD:52`.
@@ -64,17 +64,20 @@ Check it with `apksigner verify --print-certs pinch-*.apk`.
 
 ## Privacy and security
 
-- **Direct to Anthropic.** The app talks only to `api.anthropic.com` (usage), `platform.claude.com` (sign-in) and `status.claude.com` (public status, no credentials). Those hosts are hard-coded in an allow-list, HTTPS-only, with redirects off.
-- **Tokens are encrypted** with AES-256-GCM under a key kept in the Android Keystore, which can't be exported. They are never logged, never shown and never leave the phone except to Anthropic.
-- **No backups.** Android backup and device-to-device transfer are turned off for the app's data.
-- **No user-installed CAs.** The app trusts only the system's certificate authorities, so a certificate added to the phone can't be used to intercept your token.
-- **The sign-in code** is protected while you handle it. The field doesn't feed the keyboard's learning or autofill. The screen is hidden from screenshots while the code is on it. The clipboard is cleared after a successful connect.
-- **Sign-in is the PKCE "paste the code" flow** Claude Code itself uses, with the state checked, so the phone gets its own session and never borrows your computer's.
-- **No analytics, ads, crash reporters or servers of our own.** Permissions: Internet and network state, plus what WorkManager adds for background refreshes (wake lock, reschedule after reboot).
-- Widget buttons go to a private receiver; other apps can't trigger them.
-- **Sign out** wipes the tokens and cached numbers.
+Your Claude **password never touches the app**: you type it only on claude.com, in your own browser.
 
-See [SECURITY.md](SECURITY.md) to report a problem.
+- **Talks only to Anthropic.** `api.anthropic.com` for usage, `platform.claude.com` for sign-in, and the public `status.claude.com`, which receives no credentials. HTTPS only, through a hard-coded host allow-list, with redirects off and only system certificate authorities trusted.
+- **Tokens are encrypted** with AES-256-GCM under a non-exportable Android Keystore key, in the phone's security chip (StrongBox) where it has one. They are never logged or shown, never backed up, and wiped on sign-out.
+- **The sign-in is protected end to end.**
+  - Sign-in opens straight in your default browser, so no other app can show a fake login page.
+  - It uses PKCE with a state check, so nobody can swap in their own code.
+  - The code is kept away from screenshots, accessibility snoopers and the keyboard's memory, and the clipboard is cleared afterwards.
+  - Other apps' overlays are hidden while the form is on screen.
+- **No analytics, ads, crash reporters or servers of our own.**
+- **Locked-down app.** No exported entry points beyond the launcher icon and the widget, and task-hijacking protection.
+- **Verified build.** The Gradle wrapper is checked against Gradle's published checksum, and every build dependency is pinned by SHA-256.
+
+The full threat model, including what was deliberately not done and why, is in [SECURITY.md](SECURITY.md).
 
 ## Build from source
 
@@ -114,7 +117,7 @@ Debug builds include a demo hook for screenshots, which is not in release builds
 Pinch signs in to **your Claude account** and asks Anthropic for your usage, the same request Claude Code makes for its own `/usage` screen (`GET api.anthropic.com/api/oauth/usage`). Anthropic offers no other, "official" usage API to switch to; this is the one Claude Code itself uses.
 
 The numbers stay fresh on their own:
-- They refresh every 15 minutes in the background (or 30 or 60), whenever you open the app, and when you tap ⟳.
+- They refresh every 15 minutes in the background (or every 5, 30 or 60), whenever you open the app, and when you tap ⟳.
 - The 5-hour reset countdown ticks live on the widget between refreshes.
 - Sign-in renews itself: the access token is refreshed automatically before it expires.
 - The parser reads both response shapes Claude Code knows (the `limits` list and the older `five_hour`/`seven_day_*` fields) and merges them, so a field moving from one to the other loses nothing.

@@ -27,6 +27,8 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
             ClawdWidget.updateAll(ctx)
             return Result.success()
         }
+        // Keeps a 5-minute alarm alive, e.g. after a reboot (alarms do not survive one).
+        if (Settings.intervalMinutes(ctx) < 15) FastRefresh.arm(ctx)
         val state = UsageRepo.refresh(ctx)
         if (state.justReset) {
             // The 5-hour window reset: Clawd jumps for joy with confetti, then settles.
@@ -48,6 +50,7 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         private val network = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
         fun schedule(context: Context, replace: Boolean = false) {
+            FastRefresh.arm(context)
             val minutes = Settings.intervalMinutes(context).toLong().coerceAtLeast(15)
             val work = PeriodicWorkRequestBuilder<RefreshWorker>(minutes, TimeUnit.MINUTES)
                 .setConstraints(network)
@@ -68,6 +71,7 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         }
 
         fun cancel(context: Context) {
+            FastRefresh.cancel(context)
             WorkManager.getInstance(context).cancelUniqueWork(PERIODIC)
         }
     }

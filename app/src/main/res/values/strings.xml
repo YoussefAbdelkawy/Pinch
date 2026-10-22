@@ -52,6 +52,11 @@
     <string name="widget">Widget</string>
     <string name="add_widget">Add the widget to the home screen</string>
     <string name="add_widget_hint">Or long-press your home screen → Widgets → Pinch. Resize it: smaller sizes hide the extra rows.</string>
+    <string name="add_another_widget">Add another widget</string>
+    <plurals name="widget_placed">
+        <item quantity="one">✓ The widget is on your home screen</item>
+        <item quantity="other">✓ %d widgets are on your home screen</item>
+    </plurals>
     <string name="add_widget_manual">Long-press your home screen → Widgets → Pinch.</string>
     <string name="preview_unavailable">Preview unavailable.</string>
     <string name="theme">Theme</string>
