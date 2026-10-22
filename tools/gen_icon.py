@@ -58,8 +58,27 @@ def vector(size, unit, oy_extra=0.0):
             f'{body}</vector>\n')
 
 
+def tight(unit):
+    """Just the crab and his crown, no padding: for the widget's loading card."""
+    w, h = 18 * unit, 13 * unit
+    oy = 3 * unit
+    paths = [
+        ("#FFFBBF24", rects(CROWN, "g", unit, 0, 0)),
+        ("#FFD77757", rects(CLAWD, "B", unit, 0, oy)),
+        ("#FF141416", rects(CLAWD, "k", unit, 0, oy)),
+    ]
+    nl = "\n"
+    body = "".join(f'    <path android:fillColor="{c}" android:pathData="{d}" />{nl}' for c, d in paths)
+    return ('<?xml version="1.0" encoding="utf-8"?>' + nl +
+            '<vector xmlns:android="http://schemas.android.com/apk/res/android"' + nl +
+            f'    android:width="{w}dp" android:height="{h}dp"' + nl +
+            f'    android:viewportWidth="{w}" android:viewportHeight="{h}">' + nl +
+            f'{body}</vector>' + nl)
+
+
 def main():
     (RES / "drawable" / "ic_launcher_foreground.xml").write_text(vector(108, 3.2), encoding="utf-8")
+    (RES / "drawable" / "ic_crab.xml").write_text(tight(4), encoding="utf-8")
     (RES / "drawable" / "ic_launcher_background.xml").write_text(
         '<?xml version="1.0" encoding="utf-8"?>\n'
         '<shape xmlns:android="http://schemas.android.com/apk/res/android">\n'

@@ -66,6 +66,13 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         build()
+        // Redraw every widget on the home screen: one the launcher kept across a reinstall, or
+        // one that missed its first update, comes back to life just by opening the app.
+        val app = applicationContext
+        io.execute {
+            RefreshWorker.schedule(app)
+            ClawdWidget.updateAll(app)
+        }
     }
 
     override fun onResume() {

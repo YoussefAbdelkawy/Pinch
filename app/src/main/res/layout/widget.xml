@@ -150,7 +150,8 @@
                 android:layout_weight="1"
                 android:singleLine="true"
                 android:textColor="#FFE4E4E7"
-                android:textSize="12sp" />
+                android:textSize="12sp"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/session_note"
@@ -160,7 +161,7 @@
                 android:singleLine="true"
                 android:textColor="#FFE4E4E7"
                 android:textSize="12sp"
-                android:visibility="gone" />
+                android:text="@string/loading" />
 
             <TextView
                 android:id="@+id/session_label"

@@ -24,7 +24,7 @@ The bars turn yellow at 60% and red at 85%.
 
 You need an Android phone running Android 8 or newer, and a Claude Pro or Max account.
 
-1. On your phone, open the [latest release](https://github.com/YoussefAbdelkawy/Pinch/releases/latest) and download `pinch-1.0.0.apk`.
+1. On your phone, open the [latest release](https://github.com/YoussefAbdelkawy/Pinch/releases/latest) and download the `.apk` file.
 2. Open the downloaded file. If Android asks, allow your browser to install apps, then tap **Install**.
 3. Open **Pinch**.
 4. Tap **Sign in with Claude**. Your browser opens the Claude sign-in page.
@@ -34,6 +34,10 @@ You need an Android phone running Android 8 or newer, and a Claude Pro or Max ac
 8. Tap **Add the widget to the home screen** and place it.
 
 The widget opens at a size that fits everything. If you make it smaller, the bottom rows hide so nothing gets cut off.
+
+To update, download the new `.apk` from the latest release and install it over the old one. You stay signed in.
+
+To uninstall, remove the widget from your home screen first, then uninstall the app. Some launchers, including Samsung's, keep an empty widget frame after the app is gone. Android does not let an app remove its own widget, so if you see one, long-press it and choose Remove.
 
 <p align="center"><img src="docs/app.png" width="900" alt="The Pinch app" /></p>
 
