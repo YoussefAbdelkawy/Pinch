@@ -24,6 +24,8 @@ object Scenes {
         "space" -> c("#6B7280")
         "cyberpunk" -> c("#334155")
         "spring" -> c("#65A30D")
+        "oled" -> c("#27272A")
+        "midnight" -> c("#1E3A5F")
         "valentine" -> c("#DB2777")
         else -> c("#D6B98C")
     }
@@ -156,6 +158,28 @@ object Scenes {
                 }
                 p.rect(0, gy, w, 1, c("#00E5FF"))
                 ground(p, r, c("#0F172A"), c("#1E293B"), top = 1)
+            }
+            "oled" -> {
+                // True black for OLED screens: almost every pixel stays off.
+                p.fill(c("#000000"))
+                stars(p, r, gy - 4, c("#9CA3AF"), 0.012)
+                p.art(listOf("..mm", ".m..", "m...", "m...", "m...", ".m..", "..mm"), m('m' to "#E5E7EB"), w - 16, 4)
+                p.rect(0, gy, w, 1, c("#27272A"))
+            }
+            "midnight" -> {
+                // A deep blue night: mountains under a moon, a still lake in front.
+                p.vgradient(0, gy, c("#020617"), c("#172554"))
+                stars(p, r, gy - 8, c("#BFDBFE"), 0.04)
+                p.glow(w - 20, 7, 9, c("#50BFDBFE"))
+                p.art(MOON, m('m' to "#E0E7FF", 'c' to "#C7D2FE"), w - 26, 2)
+                // Two ranges of peaks, the far one paler, with gentle rolling ridgelines.
+                for (x in 0 until w) {
+                    val far = (8 + 3.5 * sin(x / 9.0) + 2 * sin(x / 4.3 + 1)).roundToInt()
+                    for (y in gy - far until gy) p.set(x, y, c("#1E3A8A"))
+                    val near = (4 + 2 * sin(x / 6.5 + 2) + 1.2 * sin(x / 3.1)).roundToInt()
+                    for (y in gy - near until gy) p.set(x, y, c("#0F1E4A"))
+                }
+                ground(p, r, c("#0B1530"), c("#1E3A5F"))
             }
             else -> { // "beach": Clawd's home, sky by the time of day
                 val (top, bottom) = when (hour) {
@@ -340,6 +364,34 @@ object Scenes {
                 if (!off) p.art(listOf(".c..ccc", "c.c..c.", "ccc..c.", "c.c..c.", "c.c.ccc"), m('c' to "#F0ABFC"), (w * 0.62).toInt(), 3)
                 val cx = across(0.0, w + 12.0, 1).toInt() - 6
                 p.art(listOf(".cccc.", "cyccyc", ".k..k."), m('c' to "#334155", 'y' to "#FDE047", 'k' to "#00E5FF"), cx, 10)
+            }
+            "oled" -> {
+                // A handful of stars breathing, and one shooting star per loop.
+                for (i in 0 until w / 14) {
+                    val x = r.nextInt(w)
+                    val y = r.nextInt(gy - 4)
+                    if (wave(1 + i % 3, r.nextDouble()) > 0.5) p.set(x, y, c("#FFFFFFFF"))
+                }
+                val s = t - n / 2
+                if (s in 0..6) for (k in 0..2) p.set(w / 4 + (s - k) * 3, 2 + (s - k), Pix.withAlpha(c("#FFFFFF"), 1f - k * 0.3f))
+            }
+            "midnight" -> {
+                // An aurora rippling across the sky, stars twinkling, fireflies by the water.
+                for (x in 0 until w) {
+                    val y = (5 + 2.5 * sin(2 * PI * (x / 40.0 + u * 2)) + 1.5 * wave(1, x / 90.0)).roundToInt()
+                    val a = (0.35 + 0.25 * sin(2 * PI * (x / 25.0 - u * 3))).toFloat()
+                    for (k in 0 until 4) p.set(x, y + k, Pix.withAlpha(c(if (k < 2) "#34D399" else "#22D3EE"), a * (1f - k * 0.22f)))
+                }
+                for (i in 0 until w / 10) {
+                    val x = r.nextInt(w)
+                    val y = 10 + r.nextInt(gy - 18)
+                    if (wave(1 + i % 3, r.nextDouble()) > 0.65) p.set(x, y, c("#FFFFFFFF"))
+                }
+                for (i in 0 until 3) {
+                    val x = (w * (0.2 + 0.3 * i) + 8 * wave(1, i * 0.3)).toInt()
+                    val y = (gy - 3 + 1.5 * wave(2, i * 0.4)).toInt()
+                    p.set(x, y, Pix.withAlpha(c("#FDE047"), (0.5 + 0.5 * wave(3, i * 0.2)).toFloat().coerceAtLeast(0.15f)))
+                }
             }
             else -> {
                 if (night) {

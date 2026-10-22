@@ -33,8 +33,8 @@ object Themes {
 
     val ALL: List<Theme> = listOf(
         theme("classic", "Classic", "#1A1A1E", "#26262C", "#F4F4F5", "#E4E4E7", "#8B8B94", "#52525B", "#60A5FA", "beach", "classic"),
-        theme("oled", "OLED black", "#000000", "#141414", "#F4F4F5", "#E4E4E7", "#8B8B94", "#52525B", "#60A5FA", "beach", "classic"),
-        theme("midnight", "Midnight", "#0F172A", "#1E293B", "#F1F5F9", "#E2E8F0", "#8494AB", "#475569", "#38BDF8", "beach", "classic"),
+        theme("oled", "OLED black", "#000000", "#141414", "#F4F4F5", "#E4E4E7", "#8B8B94", "#52525B", "#60A5FA", "oled", "classic"),
+        theme("midnight", "Midnight", "#0F172A", "#1E293B", "#F1F5F9", "#E2E8F0", "#8494AB", "#475569", "#38BDF8", "midnight", "classic"),
         theme("halloween", "Halloween", "#1C1326", "#2A1D38", "#FFF7ED", "#F5E6DA", "#A08B9C", "#5B4A63", "#F97316", "halloween", "witch", "pat_halloween"),
         theme("christmas", "Christmas", "#0E1A2B", "#16273D", "#F8FAFC", "#E2E8F0", "#94A3B8", "#475569", "#EF4444", "christmas", "santa", "pat_christmas"),
         theme("valentine", "Valentine", "#24101C", "#36182A", "#FFF1F2", "#FCE7F3", "#B48AA0", "#6B3A55", "#F472B6", "valentine", "bow", "pat_valentine"),

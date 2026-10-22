@@ -1,138 +1,138 @@
+<p align="center"><img src="docs/banner.png" alt="Pinch, a Claude usage widget for Android" /></p>
+
 # Pinch
 
-Your Claude limits on your home screen, with a pixel crab who lives on them.
+Pinch is a home screen widget for Android that shows your Claude usage limits. You can see how much of your 5-hour session and your weekly limit you have used, how much is left, and when each one resets.
 
-Pinch is an Android widget for Claude Pro and Max. It shows how much of your 5-hour session and your week is left, which model you use most, and whether Claude is up. A crab scuttles around a little animated scene that changes with the seasons. It signs in to your Claude account straight from the phone, with no server in between.
+A small pixel crab lives on the widget. He walks around a little scene, reacts to how much you have used, and changes his look with the seasons.
 
-<p align="center">
-  <img src="docs/widget.png" width="520" alt="Pinch widget, Halloween theme" />
-</p>
+<p align="center"><img src="docs/demo.gif" width="520" alt="The widget in action" /></p>
 
-## What it shows
+[Watch the demo video (MP4)](docs/demo.mp4)
 
-- **Session**: the 5-hour window, as a big percentage, **what's left**, and a live countdown to the reset
-- **Week**: the 7-day limit across all models, and when it resets
-- **Top model**: the per-model weekly limit you've used most (Fable, Sonnet, Opus…)
-- **The crab's health**: three hearts with halves, one half per ~16.7% of the session left
-- **Service status** from status.claude.com, and when the numbers were last fetched
-- Bars turn yellow from 60% and red from 85%
+## What the widget shows
 
-## The crab
+- **Session:** how much of the current 5-hour session you have used, how much is left, and a live countdown to the reset.
+- **Week:** how much of your weekly limit you have used, and when it resets.
+- **Top model:** the model with the highest weekly use, for example Fable or Sonnet.
+- **Hearts:** three hearts that empty as your session runs out.
+- **Status:** whether Claude is up, from status.claude.com.
 
-He lives on a little stage inside the widget. His home spot moves along the stage as your session fills up, and from there he wanders out and back, looks around and does a little hop. Bats, snow, butterflies, fish and clouds really travel across the scene. Everything is one seamless loop, so nothing snaps back.
-
-| Session | The crab |
-|---|---|
-| No session running | Burrowed in the sand with "z"s; now and then he peeks out |
-| Normal | Wanders out and back, looks around, hops, waves or yawns depending on his hearts |
-| 85% and up | Short tired shuffles, eyes darting, sweating |
-| 100% | Belly-up with X eyes, legs twitching |
-| The 5-hour window resets | Jumps for joy with confetti |
-| **Tap him** | One of Claude Code's own click animations (jump, spin, peekaboo, wink, boop, turn…) |
-
-The app has a big crab too. Tap him for tricks.
-
-## Themes
-
-**By season** (the default) changes with the calendar:
-
-| Dates | Theme | Scene | The crab wears |
-|---|---|---|---|
-| Oct 1 – Nov 1 | Halloween | Graveyard, moon, bats, jack-o'-lanterns, a ghost | Witch hat |
-| Dec 1 – Jan 6 | Christmas | Snowfall, a tree with blinking lights, a snowman | Santa hat |
-| Feb 7 – 15 | Valentine | Floating hearts | Bow |
-| Mar 20 – May 31 | Spring | Tulips, daisies, butterflies | Flower shorts |
-| Jun – Aug | Summer | Beach, palms, gulls, waves | Shades |
-| Rest of the year | Classic | The crab's beach; the sky follows the time of day | — |
-
-You can also pick one: Classic, OLED black, Midnight, Space, Underwater or Cyberpunk. All 27 skins are there too, or let the theme choose.
-
-<p align="center"><img src="docs/themes.jpg" width="720" alt="Themes and moods" /></p>
+The bars turn yellow at 60% and red at 85%.
 
 ## Install
 
-1. Download `pinch-<version>.apk` from [Releases](../../releases/latest) on your phone and open it. Android will ask you to allow installs from your browser; that is normal for apps outside the Play Store.
-2. Open **Pinch** → **Sign in with Claude**. Approve in the browser, then copy the code the page shows.
-3. Back in the app, tap **Connect**. You can paste the code, or leave the field empty and it reads the clipboard.
-4. Tap **Add the widget to the home screen**, or long-press the home screen → Widgets → Pinch. Resize it as you like: smaller sizes hide the extra rows.
+You need an Android phone running Android 8 or newer, and a Claude Pro or Max account.
 
-Android 8.0 or newer. It refreshes every 15 minutes by default. You can pick 30 or 60, or **5 minutes**: that one runs only while the phone is awake, so it costs nothing while the phone sleeps, and Android may stretch it by a few minutes to save battery. Tap ⟳ on the widget to refresh now. If the widget is already on your home screen, the app says so; you can still add a second one.
+1. On your phone, open the [latest release](https://github.com/YoussefAbdelkawy/Pinch/releases/latest) and download `pinch-1.0.0.apk`.
+2. Open the downloaded file. If Android asks, allow your browser to install apps, then tap **Install**.
+3. Open **Pinch**.
+4. Tap **Sign in with Claude**. Your browser opens the Claude sign-in page.
+5. Sign in to Claude and tap **Authorize**. The page shows a code.
+6. Copy the code and go back to Pinch.
+7. Paste the code in the box and tap **Connect**. If the code is already copied, you can tap **Connect** with the box empty.
+8. Tap **Add the widget to the home screen** and place it.
 
-**Verify the APK.** Release APKs are signed with this certificate (SHA-256):
-`39:D7:53:0A:8C:27:D9:C9:0A:B5:35:A9:7C:F2:8C:40:D1:BC:E6:5D:EA:88:A7:BC:58:94:63:26:77:6C:DD:52`.
-Check it with `apksigner verify --print-certs pinch-*.apk`.
+The widget opens at a size that fits everything. If you make it smaller, the bottom rows hide so nothing gets cut off.
+
+<p align="center"><img src="docs/app.png" width="900" alt="The Pinch app" /></p>
+
+## Settings
+
+You can change these in the app:
+
+- **Theme.** "By season" is the default. It picks Halloween in October, Christmas in December, Valentine in February, Spring from March 20 to May, Summer from June to August, and Classic the rest of the year. You can also pick a theme yourself.
+- **Crab skin.** "Theme's pick" dresses the crab for the theme, for example a witch hat at Halloween. There are 31 skins. Four of them come with their own animation:
+  - **Chef:** flips a pancake.
+  - **Programmer:** types on a laptop next to a cup of coffee.
+  - **Wizard:** has a sparkling wand.
+  - **Detective:** checks things with a magnifying glass.
+- **Refresh every.** Choose 5, 15, 30 or 60 minutes. The 5-minute option only runs while your phone is awake, so it does not drain the battery. Android may stretch it by a few minutes.
+
+To refresh right away, tap the refresh button on the widget. Tap the crab to see a trick.
+
+<p align="center"><img src="docs/themes.png" width="900" alt="All themes" /></p>
+
+## How the crab behaves
+
+| Your session | The crab |
+|---|---|
+| No session running | Sleeps in the sand |
+| Normal use | Walks around, looks around, waves or hops |
+| 85% or more | Moves slowly and sweats |
+| 100% | Lies on his back |
+| Your session resets | Jumps with confetti |
+
+He also moves along the scene as your session fills up, so his position shows your usage at a glance.
 
 ## Privacy and security
 
-Your Claude **password never touches the app**: you type it only on claude.com, in your own browser.
+- **Your password never goes into Pinch.** You only type it on claude.com, in your own browser.
+- **Pinch only talks to Anthropic.** It connects to `api.anthropic.com` for your usage, `platform.claude.com` for sign-in, and `status.claude.com` for the public status page. It has no server of its own, no ads and no tracking.
+- **Your sign-in is encrypted on your phone.** The key is stored in the Android Keystore, and the token is never logged or backed up. **Sign out** deletes it.
+- **The sign-in steps are protected.** The sign-in page opens in your own browser. The code is hidden from screenshots and other apps. The clipboard is cleared after you connect.
+- **It asks for very few permissions:** internet access and network state.
 
-- **Talks only to Anthropic.** `api.anthropic.com` for usage, `platform.claude.com` for sign-in, and the public `status.claude.com`, which receives no credentials. HTTPS only, through a hard-coded host allow-list, with redirects off and only system certificate authorities trusted.
-- **Tokens are encrypted** with AES-256-GCM under a non-exportable Android Keystore key, in the phone's security chip (StrongBox) where it has one. They are never logged or shown, never backed up, and wiped on sign-out.
-- **The sign-in is protected end to end.**
-  - Sign-in opens straight in your default browser, so no other app can show a fake login page.
-  - It uses PKCE with a state check, so nobody can swap in their own code.
-  - The code is kept away from screenshots, accessibility snoopers and the keyboard's memory, and the clipboard is cleared afterwards.
-  - Other apps' overlays are hidden while the form is on screen.
-- **No analytics, ads, crash reporters or servers of our own.**
-- **Locked-down app.** No exported entry points beyond the launcher icon and the widget, and task-hijacking protection.
-- **Verified build.** The Gradle wrapper is checked against Gradle's published checksum, and every build dependency is pinned by SHA-256.
+For details, see [SECURITY.md](SECURITY.md).
 
-The full threat model, including what was deliberately not done and why, is in [SECURITY.md](SECURITY.md).
+### Antivirus warnings
+
+Some antivirus apps warn about any app that is installed from outside the Play Store. Pinch is open source, so you can read all of its code here. If your antivirus flags it, you can check two things:
+
+1. The APK is signed with this certificate (SHA-256):
+   `39:D7:53:0A:8C:27:D9:C9:0A:B5:35:A9:7C:F2:8C:40:D1:BC:E6:5D:EA:88:A7:BC:58:94:63:26:77:6C:DD:52`
+2. The file's SHA-256 checksum is listed on the release page.
+
+You can also report the warning to your antivirus as a false positive.
+
+## Where the numbers come from
+
+Pinch asks Anthropic for your usage in the same way Claude Code does for its `/usage` command. Anthropic does not offer a separate public API for this, so this is the most direct source there is.
+
+- The numbers refresh in the background, when you open the app, and when you tap refresh.
+- Your sign-in renews itself, so you only sign in once.
+- If your phone is offline, the widget keeps the last numbers and says "offline".
+- If Anthropic changes the data format, the widget tells you instead of showing old numbers. An app update will fix it.
 
 ## Build from source
 
+You need JDK 17 and the Android SDK (platform 34).
+
 ```bash
-git clone <this repo>
-cd pinch
-./gradlew assembleDebug        # needs JDK 17 and the Android SDK (platform 34)
+git clone https://github.com/YoussefAbdelkawy/Pinch.git
+cd Pinch
+./gradlew assembleDebug
 ./gradlew testDebugUnitTest
 ```
 
-For a signed release, create `keystore.properties` in the repo root (it is git-ignored):
+To build a signed release, create a file called `keystore.properties` in the project folder. Git ignores this file.
 
 ```properties
 storeFile=/path/to/release.jks
-storePassword=...
-keyAlias=...
-keyPassword=...
+storePassword=your-password
+keyAlias=your-alias
+keyPassword=your-password
 ```
 
-then run `./gradlew assembleRelease`.
+Then run `./gradlew assembleRelease`.
 
-Debug builds include a demo hook for screenshots, which is not in release builds:
-`adb shell am broadcast -n dev.pinch.app/.DemoReceiver --ei session 91 --ei week 72 --es theme christmas`.
+Every library the build downloads is checked against a SHA-256 checksum in `gradle/verification-metadata.xml`.
 
-`tools/` holds the scripts that generate the wallpaper tiles, level bars and the icon.
+Debug builds have a demo command for taking screenshots. It is not included in release builds:
 
-## How it works
-
-- `auth/`: PKCE sign-in, token refresh and the Keystore-encrypted store
-- `data/`: the HTTPS client (allow-listed), usage parsing and cache, service status
-- `art/`: the crab's sprite and animations (ported glyph for glyph from Claude Code via clawd-usage-winwidget), skins, themes and scenes, drawn as logical pixels and scaled crisp
-- `art/Stage.kt`: the choreography and compositor. Home-screen widgets can't run animation code, so the widget gets one seamless 8-second loop of composed frames (scene, moving things and crab) that the launcher flips every 100 ms. The resolution is picked to stay inside the launcher's bitmap budget on any screen.
-- `widget/`: the widget, its background refresh and its buttons
-
-### Where the numbers come from (and why they don't go stale)
-
-Pinch signs in to **your Claude account** and asks Anthropic for your usage, the same request Claude Code makes for its own `/usage` screen (`GET api.anthropic.com/api/oauth/usage`). Anthropic offers no other, "official" usage API to switch to; this is the one Claude Code itself uses.
-
-The numbers stay fresh on their own:
-- They refresh every 15 minutes in the background (or every 5, 30 or 60), whenever you open the app, and when you tap ⟳.
-- The 5-hour reset countdown ticks live on the widget between refreshes.
-- Sign-in renews itself: the access token is refreshed automatically before it expires.
-- The parser reads both response shapes Claude Code knows (the `limits` list and the older `five_hour`/`seven_day_*` fields) and merges them, so a field moving from one to the other loses nothing.
-- Without a connection the widget keeps the last numbers and says "offline". If Anthropic ever reshapes the response so nothing is recognisable, the widget says so instead of quietly showing old numbers. Claude Code would need the same fix, and an app update brings it.
+```bash
+adb shell am broadcast -n dev.pinch.app/.DemoReceiver --ei session 42 --ei week 31 --es theme halloween --es skin chef
+```
 
 ## Credits
 
-Pinch is built on two MIT-licensed projects, and their notices are kept in [LICENSE](LICENSE):
+Pinch builds on two open source projects under the MIT license:
 
+- [clawd-usage-winwidget](https://github.com/Enhed/clawd-usage-winwidget) by Venger Sergey, for the crab's sprite, his tap animations, the original 27 skins and the theme colors. The crab is Clawd, the mascot of Claude Code.
+- [claude-pulse-android](https://github.com/G-biggy/claude-pulse-android), for the sign-in and usage approach.
 
-- The crab's sprite, click animations, skins, theme palettes and the Halloween scene are adapted from [clawd-usage-winwidget](https://github.com/Enhed/clawd-usage-winwidget) by Venger Sergey (MIT). The crab is Clawd, the mascot of Claude Code.
-- The sign-in and usage approach is from [claude-pulse-android](https://github.com/G-biggy/claude-pulse-android) (MIT).
+Pinch is not made by or connected to Anthropic.
 
-## Disclaimer
+## License
 
-Not affiliated with, endorsed by or supported by Anthropic. It uses Claude Code's public OAuth client and an undocumented endpoint to read your own account's usage. Use at your own discretion.
-
-MIT licensed; see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

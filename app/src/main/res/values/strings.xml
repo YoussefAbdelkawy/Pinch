@@ -38,7 +38,7 @@
     <string name="step1">1. Sign in and approve in your browser.</string>
     <string name="sign_in">Sign in with Claude</string>
     <string name="step2">2. Copy the code the page shows, then come back and paste it.</string>
-    <string name="paste_code">Paste the code (leave empty to use the clipboard)</string>
+    <string name="paste_code">Paste the code here</string>
     <string name="connect">Connect</string>
     <string name="connecting">Connecting…</string>
     <string name="refreshing">Refreshing…</string>

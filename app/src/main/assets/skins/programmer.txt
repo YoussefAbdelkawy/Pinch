@@ -1,0 +1,10 @@
+---
+name: Programmer
+k: #27272A
+g: #52525B
+r: #F87171
+top: -1
+---
+...kgggggggggggk..
+..kk..........kk..
+..kr..........rk..
