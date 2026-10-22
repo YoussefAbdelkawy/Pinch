@@ -123,14 +123,14 @@ class CoreTest {
 
     /** Loops must be seamless: full length, and the crab ends where he started, standing normally. */
     @Test fun loopsAreSeamless() {
-        for (skin in listOf("", "programmer")) for (m in Clawd.Mood.values()) for (h in 0..6) for (w in intArrayOf(40, 90, 160)) for (pct in intArrayOf(0, 50, 100)) {
+        for (skin in listOf("", "chef", "programmer", "wizard", "detective")) for (m in Clawd.Mood.values()) for (h in 0..6) for (w in intArrayOf(40, 90, 160)) for (pct in intArrayOf(0, 50, 100)) {
             val home = Stage.home(w, pct)
             val b = Stage.loop(m, h, home, w, skin)
             assertEquals(Stage.LOOP, b.size)
             assertEquals("$skin $m $h $w $pct", b.first().x, b.last().x)
             for (beat in b) assertTrue(beat.x in 0..Stage.maxX(w))
             // Walking never takes both legs off the ground on consecutive frames.
-            for (i in 1 until b.size) assertTrue(b[i - 1].f.feet == "both" || b[i].f.feet == "both" || b[i - 1].f.flip)
+            for (i in 1 until b.size) assertTrue(b[i - 1].f.feet in setOf("both", "tucked") || b[i].f.feet in setOf("both", "tucked") || b[i - 1].f.flip)
         }
     }
 

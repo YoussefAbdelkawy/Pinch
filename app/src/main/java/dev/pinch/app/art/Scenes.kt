@@ -243,18 +243,18 @@ object Scenes {
             "halloween" -> {
                 // Two bats cross the sky at different speeds and heights, bobbing, wings beating.
                 val bat = m('b' to "#7353A0", 'r' to "#F87171")
-                for ((i, spec) in listOf(Triple(0.1, 4, 1), Triple(0.6, 9, 2)).withIndex()) {
+                for ((i, spec) in listOf(Triple(0.1, 4, 1), Triple(0.55, 9, 1)).withIndex()) {
                     val (x0, y0, laps) = spec
                     val x = across(x0 * (w + 22), w + 22.0, laps).toInt() - 11
-                    val y = y0 + (2 * wave(laps * 3, i * 0.3)).roundToInt()
-                    p.art(if (flap(2, i)) BAT_UP else BAT_DOWN, bat, x, y)
+                    val y = y0 + (2 * wave(2, i * 0.3)).roundToInt()
+                    p.art(if (flap(3, i)) BAT_UP else BAT_DOWN, bat, x, y)
                 }
                 // The ghost drifts the other way, slowly, swaying up and down.
                 val gx = (w + 8) - across(0.3 * (w + 8), w + 16.0, 1).toInt()
                 p.art(GHOST, m('w' to "#C8F5F3FF", 'k' to "#1C1326"), gx, 3 + (1.5 * wave(2)).roundToInt())
                 // Candles inside the jack-o-lanterns: mostly lit, now and then a flicker.
                 for ((i, fx) in doubleArrayOf(0.22, 0.56, 0.86).withIndex()) {
-                    val dim = noise(t / 2, i) % 7 == 0
+                    val dim = noise(t / 4, i) % 7 == 0
                     p.art(PUMPKIN, m('y' to if (dim) "#FB923C" else "#FDE047"), (w * fx).toInt(), gy - 7)
                 }
                 // Will-o-the-wisps wander on slow loops and breathe.
@@ -262,7 +262,7 @@ object Scenes {
                     val cx = w * (0.15 + 0.23 * i)
                     val x = (cx + 6 * wave(1, i * 0.27)).toInt()
                     val y = (gy - 9 + 3 * wave(2, i * 0.41)).toInt()
-                    val a = 0.35f + 0.35f * ((wave(3, i * 0.5) + 1) / 2).toFloat()
+                    val a = 0.35f + 0.35f * ((wave(2, i * 0.5) + 1) / 2).toFloat()
                     p.glow(x, y, 3, Pix.withAlpha(c("#4ADE80"), a * 0.6f))
                     p.set(x, y, Pix.withAlpha(c("#BBF7D0"), a + 0.2f))
                 }
@@ -270,23 +270,23 @@ object Scenes {
             "christmas" -> {
                 // Snow: each flake falls one or two screens per loop and drifts side to side.
                 for (i in 0 until w / 3) {
-                    val laps = 1 + i % 2
+                    val laps = 1
                     val y = across(r.nextDouble() * gy, gy.toDouble(), laps).toInt()
                     val x = (r.nextDouble() * w + 1.5 * wave(2, r.nextDouble())).toInt()
-                    p.set(x, y, c(if (laps == 2) "#F8FAFC" else "#B0E2E8F0"))
+                    p.set(x, y, c(if (i % 2 == 0) "#F8FAFC" else "#B0E2E8F0"))
                 }
                 // The tree's lights chase round, and the star glows.
                 val tx = (w * 0.12).toInt()
                 val lights = listOf(3 to 2, 5 to 4, 2 to 5, 6 to 7, 1 to 8, 4 to 7, 7 to 8)
                 val cols = listOf("#EF4444", "#FDE047", "#60A5FA", "#F472B6")
-                lights.forEachIndexed { i, (lx, ly) -> p.set(tx + lx, gy - 11 + ly, c(cols[(i + t / 3) % cols.size])) }
-                p.glow(tx + 4, gy - 11, 3, Pix.withAlpha(c("#FDE047"), 0.4f + 0.3f * wave(4).toFloat()))
+                lights.forEachIndexed { i, (lx, ly) -> p.set(tx + lx, gy - 11 + ly, c(cols[(i + t / 6) % cols.size])) }
+                p.glow(tx + 4, gy - 11, 3, Pix.withAlpha(c("#FDE047"), 0.4f + 0.3f * wave(3).toFloat()))
             }
             "valentine" -> {
                 // Hearts float up, swaying, and fade near the top.
                 for (i in 0 until 7) {
-                    val y = gy - 3 - across(r.nextDouble() * gy, gy.toDouble(), 1 + i % 2)
-                    val x = (r.nextDouble() * w + 2 * wave(3, r.nextDouble())).toInt()
+                    val y = gy - 3 - across(r.nextDouble() * gy, gy.toDouble(), 1)
+                    val x = (r.nextDouble() * w + 2 * wave(2, r.nextDouble())).toInt()
                     val a = (y / gy).toFloat().coerceIn(0.15f, 1f)
                     p.art(HEART_S, mapOf('h' to Pix.withAlpha(c(if (i % 2 == 0) "#F9A8D4" else "#FB7185"), a)), x, y.toInt())
                 }
@@ -298,7 +298,7 @@ object Scenes {
                     val x = (cx + 10 * wave(1, i * 0.33)).toInt()
                     val y = (8 + 3 * i + 3 * wave(2, i * 0.33)).toInt()
                     val col = listOf("#F9A8D4", "#FDE047", "#C4B5FD")[i]
-                    p.art(if (flap(2, i)) BFLY_A else BFLY_B, m('p' to col, 'k' to "#1F2937"), x, y)
+                    p.art(if (flap(3, i)) BFLY_A else BFLY_B, m('p' to col, 'k' to "#1F2937"), x, y)
                 }
                 // Petals drift down and across.
                 for (i in 0 until 6) {
@@ -309,10 +309,10 @@ object Scenes {
             }
             "summer" -> {
                 // Glints run along the water, gulls glide across.
-                for (x in 0 until w) if ((x + t) % 9 == 0) p.set(x, gy - 5 + (x / 9) % 2, c(if (night) "#6093C5FD" else "#C0E0F2FE"))
+                for (x in 0 until w) if ((x + t / 2) % 9 == 0) p.set(x, gy - 5 + (x / 9) % 2, c(if (night) "#6093C5FD" else "#C0E0F2FE"))
                 if (!night) for (i in 0 until 2) {
                     val x = across(i * 0.5 * (w + 10), w + 10.0, 1).toInt() - 5
-                    p.art(if (flap(3, i)) GULL_A else GULL_B, m('w' to "#F8FAFC"), x, 4 + i * 4 + wave(2, i * 0.5).roundToInt())
+                    p.art(if (flap(4, i)) GULL_A else GULL_B, m('w' to "#F8FAFC"), x, 4 + i * 4 + wave(2, i * 0.5).roundToInt())
                 }
             }
             "space" -> {
@@ -329,7 +329,7 @@ object Scenes {
                 val rx = across(0.2 * (w + 10), w + 10.0, 1).toInt() - 5
                 val ry = 7 + wave(2).roundToInt()
                 p.art(listOf("..w..", ".www.", "wwbww", ".www.", "r...r"), m('w' to "#E5E7EB", 'b' to "#60A5FA", 'r' to "#F97316"), rx, ry)
-                p.set(rx - 1, ry + 2, c(if (flap(1)) "#FDE047" else "#F97316"))
+                p.set(rx - 1, ry + 2, c(if (flap(2)) "#FDE047" else "#F97316"))
                 p.set(rx - 2, ry + 2, c("#80F97316"))
                 val s = t - n / 3
                 if (s in 0..7) for (k in 0..3) p.set(w / 2 + (s - k) * 3, 2 + (s - k), Pix.withAlpha(c("#FFFFFF"), 1f - k * 0.25f))
@@ -344,8 +344,8 @@ object Scenes {
                     }
                 }
                 for (i in 0 until 7) {
-                    val y = gy - 2 - across(r.nextDouble() * gy, gy.toDouble(), 1 + i % 2).toInt()
-                    val x = (r.nextDouble() * w + wave(4, r.nextDouble())).toInt()
+                    val y = gy - 2 - across(r.nextDouble() * gy, gy.toDouble(), 1).toInt()
+                    val x = (r.nextDouble() * w + wave(2, r.nextDouble())).toInt()
                     p.art(listOf(".b.", "b.b", ".b."), m('b' to "#B0E0F2FE"), x, y)
                 }
                 p.art(FISH, m('o' to "#FB923C"), across(0.0, w + 8.0, 1).toInt() - 4, 8 + wave(2).roundToInt(), flipX = true)
@@ -355,12 +355,12 @@ object Scenes {
                 // Rain streaks, a neon "AI" that buzzes, a flying car on its route.
                 for (i in 0 until w / 3) {
                     val x0 = r.nextDouble() * w
-                    val y = across(r.nextDouble() * gy, gy.toDouble(), 3).toInt()
+                    val y = across(r.nextDouble() * gy, gy.toDouble(), 2).toInt()
                     val x = wrap(x0 - y * 0.3, w.toDouble()).toInt()
                     p.set(x, y, c("#507DF9FF"))
                     p.set(x, y + 1, c("#307DF9FF"))
                 }
-                val off = noise(t, 9) % 11 == 0 || noise(t, 3) % 13 == 0
+                val off = noise(t / 2, 9) % 11 == 0 || noise(t / 2, 3) % 13 == 0
                 if (!off) p.art(listOf(".c..ccc", "c.c..c.", "ccc..c.", "c.c..c.", "c.c.ccc"), m('c' to "#F0ABFC"), (w * 0.62).toInt(), 3)
                 val cx = across(0.0, w + 12.0, 1).toInt() - 6
                 p.art(listOf(".cccc.", "cyccyc", ".k..k."), m('c' to "#334155", 'y' to "#FDE047", 'k' to "#00E5FF"), cx, 10)
@@ -378,8 +378,8 @@ object Scenes {
             "midnight" -> {
                 // An aurora rippling across the sky, stars twinkling, fireflies by the water.
                 for (x in 0 until w) {
-                    val y = (5 + 2.5 * sin(2 * PI * (x / 40.0 + u * 2)) + 1.5 * wave(1, x / 90.0)).roundToInt()
-                    val a = (0.35 + 0.25 * sin(2 * PI * (x / 25.0 - u * 3))).toFloat()
+                    val y = (5 + 2.5 * sin(2 * PI * (x / 40.0 + u)) + 1.5 * wave(1, x / 90.0)).roundToInt()
+                    val a = (0.35 + 0.25 * sin(2 * PI * (x / 25.0 - u * 2))).toFloat()
                     for (k in 0 until 4) p.set(x, y + k, Pix.withAlpha(c(if (k < 2) "#34D399" else "#22D3EE"), a * (1f - k * 0.22f)))
                 }
                 for (i in 0 until w / 10) {
@@ -406,11 +406,11 @@ object Scenes {
                     // Clouds drift across at two speeds, a gull glides by.
                     val cloud = listOf("..www....", ".wwwwww..", "wwwwwwwww")
                     p.art(cloud, m('w' to "#C0F8FAFC"), across(0.15 * (w + 10), w + 10.0, 1).toInt() - 9, 4)
-                    p.art(cloud, m('w' to "#90F8FAFC"), across(0.6 * (w + 10), w + 10.0, 2).toInt() - 9, 9)
-                    p.art(if (flap(3)) GULL_A else GULL_B, m('w' to "#F8FAFC"), w - across(0.4 * w, w + 10.0, 1).toInt(), 6 + wave(2).roundToInt())
+                    p.art(cloud, m('w' to "#90F8FAFC"), across(0.6 * (w + 40), w + 40.0, 1).toInt() - 24, 9)
+                    p.art(if (flap(4)) GULL_A else GULL_B, m('w' to "#F8FAFC"), w - across(0.4 * w, w + 10.0, 1).toInt(), 6 + wave(2).roundToInt())
                 }
                 // Little waves roll in on the shore line.
-                for (x in 0 until w) if ((x + t) % 7 == 0) p.set(x, gy - 3, c("#A0E0F2FE"))
+                for (x in 0 until w) if ((x + t / 2) % 7 == 0) p.set(x, gy - 3, c("#A0E0F2FE"))
             }
         }
         return p
