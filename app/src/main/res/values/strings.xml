@@ -4,6 +4,7 @@
     <string name="tagline">Your Claude limits, with a crab.</string>
     <string name="widget_name">Pinch</string>
     <string name="widget_description">Your Claude session and weekly limits, with a crab</string>
+    <string name="widget_loading">PINCH  ·  LOADING</string>
     <string name="widget_title">CLAUDE USAGE</string>
     <string name="clawd">The crab. Tap him.</string>
     <string name="refresh">Refresh</string>

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
     <corners android:radius="@dimen/widget_radius" />
-    <solid android:color="#FFFFFFFF" />
+    <!-- Classic dark: what a widget shows before the app draws it. Code tints it to the theme. -->
+    <solid android:color="#FF1A1A1E" />
 </shape>
