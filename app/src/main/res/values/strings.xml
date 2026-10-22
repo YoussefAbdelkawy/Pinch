@@ -66,8 +66,6 @@
     <string name="refresh_every">Refresh every</string>
     <string name="minutes">%d min</string>
 
-    <string name="privacy">Privacy &amp; security</string>
-    <string name="privacy_body">Pinch talks only to Anthropic (api.anthropic.com, platform.claude.com) and the public status page (status.claude.com). No analytics, no ads, no servers of its own.\n\nYour Claude password never touches this app: you type it only on claude.com, in your own browser. The sign-in tokens are encrypted with a key kept in the Android Keystore, never logged, never backed up and never shown. Signing out wipes them from the phone.</string>
     <string name="disclaimer">v%s · Not affiliated with or endorsed by Anthropic. Crab art adapted from clawd-usage-winwidget (MIT).</string>
 
     <string name="err_auth">Claude rejected the code or it expired. Tap Sign in again and use the new code.</string>
