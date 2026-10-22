@@ -2,7 +2,7 @@
 
 Inputs (made with the debug build's demo hook, see README "Build from source"):
   build/media/card_<theme>.png   the widget cropped from the home screen, one per theme
-  build/media/app_top.png, app_mid.png, app_skins.png   full app screenshots
+  build/media/a1.png, a2.png, a4.png   full app screenshots (signed in via the demo hook: --ez app true)
 
 Run from the repo root:  python tools/make_docs_images.py
 """
@@ -102,20 +102,51 @@ def themes():
     img.convert("RGB").save(DOCS / "themes.png", optimize=True)
 
 
+def clean_status_bar(screen):
+    """Replaces the emulator's status bar with a tidy one: 9:41, signal, wifi, battery."""
+    s = screen.convert("RGB").copy()
+    h = 110 * s.width // 1080
+    bg = s.getpixel((s.width // 2, h + 4))
+    d = ImageDraw.Draw(s)
+    d.rectangle((0, 0, s.width, h), fill=bg)
+    k = s.width / 1080
+    d.text((int(70 * k), int(32 * k)), "9:41", font=font("segoeuib.ttf", int(40 * k)), fill=TEXT)
+    # Signal bars, wifi and battery, drawn as simple shapes.
+    x0, base = int(860 * k), int(78 * k)
+    for i in range(4):
+        bh = int((10 + i * 8) * k)
+        d.rectangle((x0 + i * int(11 * k), base - bh, x0 + i * int(11 * k) + int(7 * k), base), fill=TEXT)
+    cx, cy = int(925 * k), int(80 * k)
+    for r in (34, 22, 10):
+        d.arc((cx - r * k, cy - r * k, cx + r * k, cy + r * k), 225, 315, fill=TEXT, width=max(2, int(6 * k)))
+    bx = int(965 * k)
+    d.rounded_rectangle((bx, int(46 * k), bx + int(62 * k), int(80 * k)), radius=int(8 * k), outline=TEXT, width=max(2, int(4 * k)))
+    d.rectangle((bx + int(7 * k), int(53 * k), bx + int(46 * k), int(73 * k)), fill=TEXT)
+    d.rectangle((bx + int(64 * k), int(56 * k), bx + int(69 * k), int(70 * k)), fill=TEXT)
+    return s
+
+
 def app():
-    shots = [("app_top.png", "Sign in and meet the crab"), ("app_mid.png", "Pick a theme"),
-             ("app_skins.png", "Pick a skin")]
-    pw, gap = 380, 70
-    frames = [phone(Image.open(MEDIA / f), pw) for f, _ in shots]
+    shots = [("a1.png", "Sign in once", "Connected, with a live widget preview"),
+             ("a2.png", "Pick a look", "11 themes and 31 crab skins"),
+             ("a4.png", "Set the refresh", "Every 5, 15, 30 or 60 minutes")]
+    pw, gap, top = 400, 80, 170
+    frames = [phone(clean_status_bar(Image.open(MEDIA / f)), pw) for f, _, _ in shots]
     W = len(frames) * frames[0].width + (len(frames) + 1) * gap
-    H = frames[0].height + 170
+    H = top + frames[0].height + 170
     img = gradient(W, H).convert("RGBA")
     d = ImageDraw.Draw(img)
-    for i, (f, caption) in enumerate(zip(frames, [c for _, c in shots])):
+    title = "The Pinch app"
+    tf = font("segoeuib.ttf", 52)
+    d.text(((W - d.textlength(title, font=tf)) / 2, 58), title, font=tf, fill=TEXT)
+    d.rounded_rectangle((W / 2 - 60, 132, W / 2 + 60, 137), radius=3, fill=ACCENT)
+    for i, (f, (_, caption, sub)) in enumerate(zip(frames, shots)):
         x = gap + i * (f.width + gap)
-        shadowed(img, f, (x, 60), blur=18)
-        tw = d.textlength(caption, font=font("segoeuib.ttf", 28))
-        d.text((x + (f.width - tw) / 2, 60 + f.height + 40), caption, font=font("segoeuib.ttf", 28), fill=TEXT)
+        shadowed(img, f, (x, top), blur=20)
+        cf, sf = font("segoeuib.ttf", 30), font("segoeui.ttf", 24)
+        y = top + f.height + 38
+        d.text((x + (f.width - d.textlength(caption, font=cf)) / 2, y), caption, font=cf, fill=TEXT)
+        d.text((x + (f.width - d.textlength(sub, font=sf)) / 2, y + 44), sub, font=sf, fill=MUTED)
     img.convert("RGB").save(DOCS / "app.png", optimize=True)
 
 

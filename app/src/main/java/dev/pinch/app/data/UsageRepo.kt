@@ -1,6 +1,7 @@
 package dev.pinch.app.data
 
 import android.content.Context
+import dev.pinch.app.Settings
 import dev.pinch.app.auth.ClaudeAuth
 import org.json.JSONObject
 
@@ -34,8 +35,15 @@ object UsageRepo {
         return State(usage, p.getString("error", null), status)
     }
 
+    /** Stores numbers as if just fetched; used by the debug demo hook. */
+    fun store(context: Context, usage: Usage, status: ServiceStatus?) {
+        prefs(context).edit().putString("usage", usage.toJson()).remove("error")
+            .putString("status_indicator", status?.indicator).putString("status_desc", status?.description).apply()
+    }
+
     @Synchronized
     fun refresh(context: Context): State {
+        if (Settings.demo(context)) return cached(context)
         val before = cached(context)
         val status = fetchStatus() ?: before.status
         val result = fetchUsage(context)

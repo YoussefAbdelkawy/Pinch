@@ -26,6 +26,13 @@ object Settings {
         return Skins.get(context, if (choice == "auto") theme.skin else choice)
     }
 
+    /**
+     * Debug builds only: the app pretends to be signed in and shows the numbers the demo hook
+     * stored, for screenshots. Always false in a release build.
+     */
+    fun demo(context: Context): Boolean = BuildConfig.DEBUG && prefs(context).getBoolean("demo", false)
+    fun setDemo(context: Context, on: Boolean) = prefs(context).edit().putBoolean("demo", on).apply()
+
     /** Minutes between background refreshes; WorkManager's floor is 15. */
     fun intervalMinutes(context: Context): Int = prefs(context).getInt("interval", 15)
     fun setIntervalMinutes(context: Context, minutes: Int) = prefs(context).edit().putInt("interval", minutes).apply()

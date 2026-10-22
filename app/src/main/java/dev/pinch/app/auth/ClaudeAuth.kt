@@ -3,6 +3,7 @@ package dev.pinch.app.auth
 import android.content.Context
 import android.net.Uri
 import android.util.Base64
+import dev.pinch.app.Settings
 import dev.pinch.app.data.Http
 import org.json.JSONObject
 import java.security.MessageDigest
@@ -39,6 +40,7 @@ object ClaudeAuth {
     private fun store(context: Context) = SecureStore(context)
 
     fun isSignedIn(context: Context): Boolean {
+        if (Settings.demo(context)) return true
         val s = store(context)
         return s.get(K_REFRESH) != null || s.get(K_ACCESS) != null
     }
