@@ -81,6 +81,7 @@ class CoreTest {
             val s = Skins.parse(f.nameWithoutExtension, f.readText())
             assertNotNull(f.name, s)
             assertTrue(f.name, s!!.layers.isNotEmpty())
+            assertTrue(f.name, s.layers.all { l -> l.px.all { (x, _) -> x in 0 until Clawd.W } })
             s.id
         }.toSet()
         for (t in Themes.ALL) assertTrue(t.skin, t.skin == "classic" || t.skin in ids)
@@ -106,13 +107,27 @@ class CoreTest {
         }
     }
 
+    @Test fun propsDrawForEveryFrame() {
+        for (id in listOf("chef", "programmer", "wizard", "detective")) {
+            val skin = dev.pinch.app.art.Skin(id, id, Skins.CLASSIC.body, Skins.CLASSIC.eyes, emptyList())
+            val bg = Scenes.background("beach", 120, 12)
+            val beats = Stage.loop(Clawd.Mood.IDLE, 6, 30, 120, id)
+            var drew = false
+            for (t in beats.indices) {
+                val p = Stage.compose(bg, "beach", 12, t, beats.size, beats[t], skin)
+                if (!p.px.contentEquals(Stage.compose(bg, "beach", 12, t, beats.size, beats[t], Skins.CLASSIC).px)) drew = true
+            }
+            assertTrue(id, drew)
+        }
+    }
+
     /** Loops must be seamless: full length, and the crab ends where he started, standing normally. */
     @Test fun loopsAreSeamless() {
-        for (m in Clawd.Mood.values()) for (h in 0..6) for (w in intArrayOf(40, 90, 160)) for (pct in intArrayOf(0, 50, 100)) {
+        for (skin in listOf("", "programmer")) for (m in Clawd.Mood.values()) for (h in 0..6) for (w in intArrayOf(40, 90, 160)) for (pct in intArrayOf(0, 50, 100)) {
             val home = Stage.home(w, pct)
-            val b = Stage.loop(m, h, home, w)
+            val b = Stage.loop(m, h, home, w, skin)
             assertEquals(Stage.LOOP, b.size)
-            assertEquals("$m $h $w $pct", b.first().x, b.last().x)
+            assertEquals("$skin $m $h $w $pct", b.first().x, b.last().x)
             for (beat in b) assertTrue(beat.x in 0..Stage.maxX(w))
             // Walking never takes both legs off the ground on consecutive frames.
             for (i in 1 until b.size) assertTrue(b[i - 1].f.feet == "both" || b[i].f.feet == "both" || b[i - 1].f.flip)

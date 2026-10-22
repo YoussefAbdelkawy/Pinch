@@ -6,3 +6,7 @@
     public static *** w(...);
     public static *** e(...);
 }
+
+# Shrink and optimise, but keep readable class names: the code is open source, and
+# scrambled names are one of the things antivirus heuristics flag in sideloaded apps.
+-dontobfuscate

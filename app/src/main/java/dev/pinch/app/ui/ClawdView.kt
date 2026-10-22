@@ -108,7 +108,7 @@ class ClawdView(context: Context) : View(context) {
             key = k
             stageW = lw
             bg = Scenes.background(theme.scene, lw, hour)
-            loop = Stage.loop(mood, halves, Stage.home(lw, position), lw)
+            loop = Stage.loop(mood, halves, Stage.home(lw, position), lw, skin.id)
         }
         val beat = act?.getOrNull(actT) ?: loop[t % loop.size]
         val pix = Stage.compose(bg!!, theme.scene, hour, t, Stage.LOOP, beat, skin)

@@ -4,7 +4,9 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.os.Build
 import android.os.SystemClock
+import android.util.SizeF
 import android.view.View
 import android.widget.RemoteViews
 import dev.pinch.app.R
@@ -51,6 +53,12 @@ object WidgetRenderer {
         return Look(theme, Settings.skin(context, theme))
     }
 
+    /** Heights (dp) from which each extra row fits, smallest layout first. */
+    private val LAYOUT_HEIGHTS = intArrayOf(100, 130, 165, 195, 225)
+
+    /** Pictures shared by every size variant, drawn once (the launcher stores each only once). */
+    private class Art(val stage: List<Bitmap>, val flipMs: Int, val hearts: List<Bitmap>)
+
     /**
      * @param act a one-shot animation to play instead of the mood loop (a tap, a celebration).
      */
@@ -61,7 +69,59 @@ object WidgetRenderer {
         widthDp: Int,
         heightDp: Int,
         act: List<Frame>? = null,
-        look: Look = look(context)
+        look: Look = look(context),
+        /** False for the in-app preview, which has a fixed size and wants that one layout. */
+        responsive: Boolean = true
+    ): RemoteViews {
+        val art = art(context, state, signedIn, widthDp, act, look)
+        // Android 12+: hand the launcher one layout per height and let it pick the one that
+        // fits the widget's real size, so no row is ever cut off, whatever the launcher reports.
+        if (responsive && Build.VERSION.SDK_INT >= 31) {
+            return RemoteViews(LAYOUT_HEIGHTS.associate { h ->
+                SizeF(120f, h.toFloat()) to one(context, state, signedIn, h, look, art)
+            })
+        }
+        return one(context, state, signedIn, heightDp, look, art)
+    }
+
+    private fun art(
+        context: Context, state: UsageRepo.State, signedIn: Boolean, widthDp: Int, act: List<Frame>?, look: Look
+    ): Art {
+        val theme = look.theme
+        val usage = state.usage
+        val session = usage?.session
+        val authProblem = !signedIn || state.error == "auth_error"
+        val halves = if (authProblem) null else usage?.heartHalves
+        val hearts = when {
+            halves == null -> emptyList()
+            // Last bit of health: the hearts beat.
+            halves in 1..2 -> hearts(halves, 1f).let { still -> listOf(still, hearts(halves, 0.6f)) + List(5) { still } }
+            else -> listOf(hearts(halves, 1f))
+        }
+
+        // The stage: one seamless loop of composed frames (scene + moving things + crab).
+        val stageDp = (widthDp - SIDE_PADDING_DP - LEFT_COLUMN_DP).coerceAtLeast(80)
+        val stageW = stageDp / DP_PER_PX
+        val hour = LocalDateTime.now().hour
+        val mood = moodOf(state, signedIn)
+        val home = Stage.home(stageW, if (authProblem) null else session?.percent)
+        val beats = if (act != null) Stage.act(act, home, stageW) else Stage.loop(mood, halves ?: 6, home, stageW, look.skin.id)
+        // The launcher caps a widget's bitmaps at about 1.5 screens of pixels: pick the
+        // sharpest scale that keeps the loop well inside that, else skip every other frame.
+        val dm = context.resources.displayMetrics
+        val budget = dm.widthPixels.toLong() * dm.heightPixels * 4 * 3 / 2 / 2
+        fun cost(scale: Int, frames: Int) = stageW.toLong() * scale * Scenes.H * scale * 2 * frames
+        val scale = (4 downTo 2).firstOrNull { cost(it, beats.size) <= budget } ?: 2
+        val stride = if (cost(scale, beats.size) <= budget) 1 else 2
+        val bg = Scenes.background(theme.scene, stageW, hour)
+        val frames = beats.indices.step(stride).map { t ->
+            Stage.compose(bg, theme.scene, hour, t, beats.size, beats[t], look.skin).toBitmap(scale, Bitmap.Config.RGB_565)
+        }
+        return Art(frames, (Stage.FRAME_MS * stride).toInt(), hearts)
+    }
+
+    private fun one(
+        context: Context, state: UsageRepo.State, signedIn: Boolean, heightDp: Int, look: Look, art: Art
     ): RemoteViews {
         val theme = look.theme
         val v = RemoteViews(context.packageName, R.layout.widget)
@@ -96,41 +156,13 @@ object WidgetRenderer {
             v.setTextViewText(R.id.left_text, "")
         }
 
-        // ---- hearts
-        val halves = if (authProblem) null else usage?.heartHalves
+        // ---- hearts and the stage
         v.removeAllViews(R.id.hearts)
-        if (halves != null) {
-            v.setViewVisibility(R.id.hearts, View.VISIBLE)
-            val still = hearts(halves, 1f)
-            v.addView(R.id.hearts, frame(context, still))
-            // Last bit of health: the hearts beat.
-            if (halves in 1..2) {
-                v.addView(R.id.hearts, frame(context, hearts(halves, 0.6f)))
-                repeat(5) { v.addView(R.id.hearts, frame(context, still)) }
-            }
-        } else v.setViewVisibility(R.id.hearts, View.GONE)
-
-        // ---- the stage: one seamless loop of composed frames (scene + moving things + crab)
-        val stageDp = (widthDp - SIDE_PADDING_DP - LEFT_COLUMN_DP).coerceAtLeast(80)
-        val stageW = stageDp / DP_PER_PX
-        val hour = LocalDateTime.now().hour
-        val mood = moodOf(state, signedIn)
-        val home = Stage.home(stageW, if (authProblem) null else session?.percent)
-        val beats = if (act != null) Stage.act(act, home, stageW) else Stage.loop(mood, halves ?: 6, home, stageW)
-        // The launcher caps a widget's bitmaps at about 1.5 screens of pixels: pick the
-        // sharpest scale that keeps the loop well inside that, else skip every other frame.
-        val dm = context.resources.displayMetrics
-        val budget = dm.widthPixels.toLong() * dm.heightPixels * 4 * 3 / 2 / 2
-        fun cost(scale: Int, frames: Int) = stageW.toLong() * scale * Scenes.H * scale * 2 * frames
-        val scale = (4 downTo 2).firstOrNull { cost(it, beats.size) <= budget } ?: 2
-        val stride = if (cost(scale, beats.size) <= budget) 1 else 2
-        val bg = Scenes.background(theme.scene, stageW, hour)
+        v.setViewVisibility(R.id.hearts, if (art.hearts.isEmpty()) View.GONE else View.VISIBLE)
+        for (h in art.hearts) v.addView(R.id.hearts, frame(context, h))
         v.removeAllViews(R.id.stage_anim)
-        for (t in beats.indices step stride) {
-            val pix = Stage.compose(bg, theme.scene, hour, t, beats.size, beats[t], look.skin)
-            v.addView(R.id.stage_anim, frame(context, pix.toBitmap(scale, Bitmap.Config.RGB_565)))
-        }
-        v.setInt(R.id.stage_anim, "setFlipInterval", (Stage.FRAME_MS * stride).toInt())
+        for (f in art.stage) v.addView(R.id.stage_anim, frame(context, f))
+        v.setInt(R.id.stage_anim, "setFlipInterval", art.flipMs)
 
         // ---- session bar and its reset countdown
         bar(v, "session", session?.percent, authProblem)
@@ -187,13 +219,15 @@ object WidgetRenderer {
         if (dot != null) v.setTextColor(R.id.status, dot)
         v.setTextViewText(R.id.updated, updatedText(context, state))
 
-        // ---- fit the height we have
-        v.setViewVisibility(R.id.footer, if (heightDp >= 235 && status != null) View.VISIBLE else View.GONE)
-        v.setViewVisibility(R.id.model_row, if (heightDp >= 175) View.VISIBLE else View.GONE)
-        val showWeek = heightDp >= 140
+        // ---- fit the height we have: rows drop away from the bottom as it shrinks
+        val (tiny, compact, medium, full, roomy) = LAYOUT_HEIGHTS.toList()
+        v.setViewVisibility(R.id.header, if (heightDp >= compact) View.VISIBLE else View.GONE)
+        val showWeek = heightDp >= medium
         v.setViewVisibility(R.id.week_row, if (showWeek) View.VISIBLE else View.GONE)
         v.setViewVisibility(R.id.week_bars, if (showWeek) View.VISIBLE else View.GONE)
-        v.setViewVisibility(R.id.header, if (heightDp >= 110) View.VISIBLE else View.GONE)
+        v.setViewVisibility(R.id.model_row, if (heightDp >= full) View.VISIBLE else View.GONE)
+        v.setViewVisibility(R.id.footer, if (heightDp >= roomy && status != null) View.VISIBLE else View.GONE)
+        v.setViewVisibility(R.id.session_row, if (heightDp > tiny) View.VISIBLE else View.GONE)
 
         // ---- taps
         val open = PendingIntent.getActivity(

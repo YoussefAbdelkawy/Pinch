@@ -13,9 +13,9 @@ object Clawd {
     const val GROUND = H - 2  // first empty row under the feet
 
     /** The canvas a frame is drawn on: room for hats and bubbles above, dust at the sides. */
-    const val CANVAS_W = 30
+    const val CANVAS_W = 36
     const val CANVAS_H = 20
-    const val ORIGIN_X = 6
+    const val ORIGIN_X = 9
     const val ORIGIN_Y = CANVAS_H - GROUND
 
     private val QUAD = mapOf(
@@ -71,7 +71,7 @@ object Clawd {
      * Draws one frame of Clawd onto [dst] with his grid's top-left at ([ox], [oy]).
      * [sand] is the colour of the mound when he burrows.
      */
-    fun draw(dst: Pix, f: Frame, skin: Skin, ox: Int, oy: Int, sand: Int) {
+    fun draw(dst: Pix, f: Frame, skin: Skin, ox: Int, oy: Int, sand: Int, tick: Int = 0) {
         val g = Array(W) { IntArray(H) } // 0 empty, 1 body, 2 eyes / face
 
         fun paint(glyphs: String, col: Int, row: Int, mode: String) {
@@ -155,6 +155,9 @@ object Clawd {
                 dst.set(ox + xx, top + yy, layer.color)
             }
         }
+
+        // What the skin holds (pan, laptop, wand, magnifier), while he is upright and above ground.
+        if (!f.flip && f.dig == 0 && f.facing.isEmpty()) Props.draw(dst, skin.id, tick, ox + dx, top + dy)
 
         // Dust puffs at the sides while crouched.
         if (f.poof.isNotEmpty() && f.off > 0) {

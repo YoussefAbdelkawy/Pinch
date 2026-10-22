@@ -92,9 +92,6 @@ class MainActivity : Activity() {
         window.navigationBarColor = theme.bg
         val signedIn = ClaudeAuth.isSignedIn(this)
         val state = UsageRepo.cached(this)
-        // While the sign-in form is on screen, other apps' floating windows are hidden, so
-        // nothing can sit on top of it pretending to be part of it (Android 12+).
-        if (Build.VERSION.SDK_INT >= 31) window.setHideOverlayWindows(!signedIn || state.error == "auth_error")
 
         val col = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -127,7 +124,7 @@ class MainActivity : Activity() {
             val holder = FrameLayout(this)
             box.addView(holder, LinearLayout.LayoutParams(-1, dp(230)))
             try {
-                val rv = WidgetRenderer.build(this, state, signedIn, pxToDp(resources.displayMetrics.widthPixels) - 64, 230)
+                val rv = WidgetRenderer.build(this, state, signedIn, pxToDp(resources.displayMetrics.widthPixels) - 64, 230, responsive = false)
                 holder.addView(rv.apply(applicationContext, holder))
             } catch (_: Exception) {
                 holder.addView(text(getString(R.string.preview_unavailable), 13f, theme.muted))
@@ -264,7 +261,7 @@ class MainActivity : Activity() {
                 setImageBitmap(WidgetRenderer.crabBitmap(Frame(), skin, sand))
                 scaleType = ImageView.ScaleType.FIT_CENTER
             }
-            cell.addView(img, LinearLayout.LayoutParams(dp(cellW - 12), dp((cellW - 12) * 23 / 30)))
+            cell.addView(img, LinearLayout.LayoutParams(dp(cellW - 12), dp((cellW - 12) * 23 / 36)))
             val name = if (id == "auto") getString(R.string.skin_auto) else skin.name
             cell.addView(text(name, 11f, theme.text).apply { gravity = Gravity.CENTER; maxLines = 2 })
             flow.addView(cell, ViewGroup.LayoutParams(dp(cellW), -2))

@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Talk to Anthropic over HTTPS and know whether there is a network. WorkManager adds its own
-         (wake lock, reschedule after reboot) for the background refresh. -->
+    <!-- Talk to Anthropic over HTTPS and know whether there is a network. WorkManager adds a
+         wake lock for the background refresh. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- Lets the sign-in screen hide other apps' floating windows (tapjacking, fake overlays). -->
-    <uses-permission android:name="android.permission.HIDE_OVERLAY_WINDOWS" />
+    <!-- WorkManager asks for these by default; Pinch needs neither (the launcher wakes it after a
+         reboot anyway), and fewer permissions means fewer antivirus false alarms. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
 
     <!-- To find the user's default browser for sign-in. -->
     <queries>

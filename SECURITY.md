@@ -19,13 +19,15 @@ Please report vulnerabilities privately through GitHub's **Report a vulnerabilit
 | A fake sign-in page from an app that claims claude.com links | Sign-in opens directly in your default browser, not through whatever app claims the link. |
 | Swap in their own sign-in code (log you into an attacker's account) | PKCE (S256) with a state value that must match the sign-in this phone started (constant-time check). |
 | Read the code from the screen, the clipboard or the keyboard | `FLAG_SECURE` while it is on screen; the field is marked accessibility-sensitive (Android 14+); incognito keyboard (no personalised learning, no suggestions, no autofill); the clipboard is cleared after connecting. |
-| Overlay or tapjacking over the sign-in form | Other apps' floating windows are hidden while the form is shown (Android 12+); Connect ignores touches that pass through an overlay. |
+| Overlay or tapjacking over the sign-in form | Connect ignores touches that pass through another app's overlay. |
 | Hijack the app's task with a look-alike screen (StrandHogg) | Empty task affinity on the only activity. |
 | Trigger the widget's actions from another app | The widget's buttons and the refresh alarm go to receivers that are not exported, through immutable explicit PendingIntents. The debug demo hook exists only in debug builds and needs a system-only permission. |
 | Ship a poisoned build (a swapped Gradle or library) | The Gradle wrapper jar is the official 8.7 one, and CI validates it on every push. The Gradle download is pinned by SHA-256. All 287 build dependencies are pinned by SHA-256 in `gradle/verification-metadata.xml`, so a changed artifact fails the build. |
 | Ship a fake APK as an "update" | Releases are signed. Android refuses an update signed with a different key, and the certificate fingerprint is in the README so you can check it yourself. |
 
 Usage percentages, reset times and look settings live in ordinary app-private storage; they are not secrets.
+
+Permissions are kept to the minimum: internet, network state, and the wake lock WorkManager needs for background refresh. The boot and foreground-service permissions WorkManager adds by default are removed, and class names are not obfuscated, because both are common antivirus triggers for sideloaded apps.
 
 ## Deliberately not done (they would cost you in day-to-day use)
 

@@ -33,8 +33,23 @@ object Stage {
     /** Walk cycle: legs alternate with a "both down" in between, so no leg ever blinks out. */
     private val STRIDE = listOf("both", "left", "both", "right")
 
-    fun loop(mood: Clawd.Mood, halves: Int, home: Int, w: Int, n: Int = LOOP): List<Beat> {
+    fun loop(mood: Clawd.Mood, halves: Int, home: Int, w: Int, skinId: String = "", n: Int = LOOP): List<Beat> {
         val b = Builder(home.coerceIn(0, maxX(w)))
+        if (Props.sedentary(skinId) && (mood == Clawd.Mood.IDLE || mood == Clawd.Mood.CRIT)) {
+            // At the keyboard: tapping away, glancing at the screen, the odd blink.
+            val tired = mood == Clawd.Mood.CRIT
+            for (t in 0 until n) {
+                val eyes = when {
+                    t % 27 == 13 -> "blink"
+                    tired -> "focus"
+                    t % 40 in 30..35 -> "open"
+                    else -> "happy"
+                }
+                b.hold(1, Frame(eyes = eyes, arms = if ((t / 2) % 2 == 0) "down" else "right",
+                    look = if (t % 40 in 30..35) 1 else 0, sweat = if (tired) 1 + (t / 2) % 3 else 0))
+            }
+            return b.out
+        }
         when (mood) {
             Clawd.Mood.SLEEP -> {
                 // Burrowed, "z"s rising; halfway through he peeks out, looks around, sinks back.
@@ -137,7 +152,7 @@ object Stage {
         val p = Pix(bg.w, bg.h)
         System.arraycopy(bg.px, 0, p.px, 0, bg.px.size)
         Scenes.fx(scene, bg.w, hour, t, n).drawInto(p, 0, 0)
-        Clawd.draw(p, beat.f, skin, beat.x + Clawd.ORIGIN_X, CRAB_TOP, Scenes.sand(scene))
+        Clawd.draw(p, beat.f, skin, beat.x + Clawd.ORIGIN_X, CRAB_TOP, Scenes.sand(scene), t)
         return p
     }
 }
