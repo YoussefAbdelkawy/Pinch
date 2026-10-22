@@ -1,11 +1,10 @@
-package dev.clawdusage.app.widget
+package dev.pinch.app.widget
 
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import dev.clawdusage.app.art.Clawd
-import dev.clawdusage.app.art.everyOther
+import dev.pinch.app.art.Clawd
 
 /**
  * The widget's buttons. Not exported: only the widget's own PendingIntents (sent with this
@@ -19,13 +18,13 @@ class WidgetActions : BroadcastReceiver() {
             ACTION_TAP -> {
                 // Tapping Clawd plays one of Claude Code's click animations, then he goes back to his mood.
                 val name = Clawd.TAP_ACTS.random()
-                val frames = Clawd.SEQS.getValue(name).everyOther()
+                val frames = Clawd.SEQS.getValue(name)
                 val app = context.applicationContext
                 val pending = goAsync()
                 Thread {
                     try {
                         ClawdWidget.updateAll(app, act = frames)
-                        Thread.sleep((frames.size * 120L + 200).coerceAtMost(8_000))
+                        Thread.sleep((frames.size * Clawd.FRAME_MS + 300).coerceAtMost(8_000))
                         ClawdWidget.updateAll(app)
                     } catch (_: Exception) {
                     } finally {
@@ -37,8 +36,8 @@ class WidgetActions : BroadcastReceiver() {
     }
 
     companion object {
-        const val ACTION_REFRESH = "dev.clawdusage.app.action.REFRESH"
-        const val ACTION_TAP = "dev.clawdusage.app.action.TAP"
+        const val ACTION_REFRESH = "dev.pinch.app.action.REFRESH"
+        const val ACTION_TAP = "dev.pinch.app.action.TAP"
 
         fun pending(context: Context, action: String): PendingIntent = PendingIntent.getBroadcast(
             context, action.hashCode(),

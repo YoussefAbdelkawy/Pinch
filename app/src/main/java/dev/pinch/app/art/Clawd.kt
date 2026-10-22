@@ -1,4 +1,4 @@
-package dev.clawdusage.app.art
+package dev.pinch.app.art
 
 import kotlin.math.min
 
@@ -183,11 +183,11 @@ object Clawd {
             val sy = top + dy - 1 + f.sweat
             dst.set(ox + W, sy, SWEAT); dst.set(ox + W, sy + 1, SWEAT); dst.set(ox + W + 1, sy + 1, SWEAT)
         }
-        // Z's rising while asleep.
+        // A "z" floats up from behind his head, sways and fades (zz runs 1..8).
         if (f.zz > 0) {
-            val zx = ox + W + 1 + (f.zz % 2)
-            val zy = oy + dy - 4 - f.zz
-            dst.art(GLYPH_Z, mapOf('q' to Pix.withAlpha(ZZZ, 1f - 0.18f * f.zz)), zx, zy)
+            val zx = ox + W + (if ((f.zz / 3) % 2 == 0) 0 else 1)
+            val zy = oy + dy - 3 - f.zz
+            dst.art(GLYPH_Z, mapOf('q' to Pix.withAlpha(ZZZ, 1f - 0.09f * f.zz)), zx, zy)
         }
         // "?" or "!" over his head.
         f.bubble?.let { ch ->
@@ -274,34 +274,6 @@ object Clawd {
         SEQS.getValue("celebrate").mapIndexed { i, f -> f.copy(confetti = i / 2, bubble = '!') }
 
     enum class Mood { IDLE, CRIT, DEAD, SLEEP }
-
-    /** The looping animation for a mood; [halves] is Clawd's health (0..6). */
-    fun moodLoop(mood: Mood, halves: Int): List<Frame> = when (mood) {
-        Mood.SLEEP -> (0 until 24).map { t ->
-            Frame(eyes = if (t in 10..11) "blink" else "closed", dig = 4, zz = (t / 4) % 4 + 1)
-        }
-        Mood.DEAD -> (0 until 20).map { t ->
-            Frame(eyes = "x", flip = true, feet = if (t in 8..11) (if (t % 2 == 0) "left" else "right") else "both")
-        }
-        Mood.CRIT -> {
-            val tired = Frame(eyes = "focus", sweat = 1)
-            List(6) { tired.copy(sweat = 1 + it % 3) } + F("closed/down/both").map { it.copy(sweat = 2) } +
-                List(6) { tired.copy(sweat = 1 + it % 3) } +
-                List(5) { Frame(eyes = "focus", look = -1, sweat = 1 + it % 3) } +
-                List(5) { Frame(eyes = "focus", look = 1, sweat = 1 + it % 3) } +
-                (if (halves <= 1) List(4) { Frame(eyes = "yawn", sweat = 2) } else emptyList())
-        }
-        Mood.IDLE -> {
-            val rest = F("default", 10) + ts + F("default", 6) + F("look-left", 5) + F("look-right", 5) +
-                F("default", 4) + ts + F("default", 4)
-            val flourish = when {
-                halves >= 6 -> F("arms-up", 3) + bo + F("arms-up", 3)
-                halves >= 4 -> F("wink/down/both", 4)
-                else -> F("yawn/down/both", 6)
-            }
-            rest + flourish + F("default", 4) + F("open/down/left", 2) + F("open/down/right", 2) + bo
-        }
-    }
 }
 
 /** One pose of Clawd. Mirrors the frame fields of the Windows widget. */
@@ -324,5 +296,3 @@ data class Frame(
     val confetti: Int = -1
 )
 
-/** Half the frames, for the widget's slower 120 ms frame clock. */
-fun List<Frame>.everyOther(): List<Frame> = filterIndexed { i, _ -> i % 2 == 0 }.ifEmpty { this }

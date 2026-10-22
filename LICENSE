@@ -3,7 +3,7 @@ MIT License
 Copyright (c) 2026 Youssef Abdelkawy
 
 Portions (Clawd's sprite, animations, skins, theme palettes and scenes, in
-app/src/main/assets/skins and app/src/main/java/dev/clawdusage/app/art) are
+app/src/main/assets/skins and app/src/main/java/dev/pinch/app/art) are
 derived from clawd-usage-winwidget, Copyright (c) 2026 Venger Sergey, MIT License.
 The sign-in and usage-fetching approach follows claude-pulse-android (MIT License).
 

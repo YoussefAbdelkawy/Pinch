@@ -1,4 +1,4 @@
-package dev.clawdusage.app.art
+package dev.pinch.app.art
 
 import android.content.Context
 

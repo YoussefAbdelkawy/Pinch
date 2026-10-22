@@ -1,4 +1,4 @@
-package dev.clawdusage.app.widget
+package dev.pinch.app.widget
 
 import android.content.Context
 import androidx.work.BackoffPolicy
@@ -11,11 +11,10 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import dev.clawdusage.app.Settings
-import dev.clawdusage.app.art.Clawd
-import dev.clawdusage.app.art.everyOther
-import dev.clawdusage.app.auth.ClaudeAuth
-import dev.clawdusage.app.data.UsageRepo
+import dev.pinch.app.Settings
+import dev.pinch.app.art.Clawd
+import dev.pinch.app.auth.ClaudeAuth
+import dev.pinch.app.data.UsageRepo
 import kotlinx.coroutines.delay
 import java.util.concurrent.TimeUnit
 
@@ -31,9 +30,9 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         val state = UsageRepo.refresh(ctx)
         if (state.justReset) {
             // The 5-hour window reset: Clawd jumps for joy with confetti, then settles.
-            val party = Clawd.celebrate().everyOther()
+            val party = Clawd.celebrate()
             ClawdWidget.updateAll(ctx, state, party)
-            delay(party.size * 120L + 300)
+            delay(party.size * Clawd.FRAME_MS + 300)
         }
         ClawdWidget.updateAll(ctx, state)
         return when (state.error) {

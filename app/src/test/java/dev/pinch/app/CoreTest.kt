@@ -1,13 +1,14 @@
-package dev.clawdusage.app
+package dev.pinch.app
 
-import dev.clawdusage.app.art.Clawd
-import dev.clawdusage.app.art.Frame
-import dev.clawdusage.app.art.Pix
-import dev.clawdusage.app.art.Scenes
-import dev.clawdusage.app.art.Skins
-import dev.clawdusage.app.art.Themes
-import dev.clawdusage.app.data.Level
-import dev.clawdusage.app.data.Usage
+import dev.pinch.app.art.Clawd
+import dev.pinch.app.art.Frame
+import dev.pinch.app.art.Pix
+import dev.pinch.app.art.Scenes
+import dev.pinch.app.art.Skins
+import dev.pinch.app.art.Stage
+import dev.pinch.app.art.Themes
+import dev.pinch.app.data.Level
+import dev.pinch.app.data.Usage
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -24,8 +25,8 @@ class CoreTest {
             """{"limits":[
                 {"kind":"session","percent":42.4,"resets_at":"2026-10-22T18:00:00+00:00"},
                 {"kind":"weekly_all","percent":31,"resets_at":"2026-10-26T05:59:00Z"},
-                {"kind":"weekly_model","percent":19,"resets_at":null,"scope":{"model":{"display_name":"Fable"}}},
-                {"kind":"weekly_model","percent":7,"scope":{"model":{"display_name":"Sonnet"}}}
+                {"kind":"weekly_scoped","percent":19,"resets_at":null,"scope":{"model":{"display_name":"Fable"}}},
+                {"kind":"weekly_scoped","percent":7,"scope":{"model":{"display_name":"Sonnet"}}}
             ]}"""
         )
         val u = Usage.parse(json, now = 0)
@@ -88,7 +89,7 @@ class CoreTest {
     @Test fun drawsEveryAnimationAndScene() {
         val crown = Skins.parse("crown", "---\nname: Crown\ng: #FBBF24\n---\n.....g...g...g....\n")!!
         val frames = Clawd.SEQS.values.flatten() + Clawd.celebrate() +
-            Clawd.Mood.values().flatMap { m -> (0..6).flatMap { Clawd.moodLoop(m, it) } }
+            Clawd.Mood.values().flatMap { m -> (0..6).flatMap { h -> Stage.loop(m, h, 40, 140).map { it.f } } }
         for (f in frames) {
             val p = Pix(Clawd.CANVAS_W, Clawd.CANVAS_H + Scenes.GROUND)
             Clawd.draw(p, f, crown, Clawd.ORIGIN_X, Clawd.ORIGIN_Y, 0xFFFFFFFF.toInt())
@@ -99,8 +100,38 @@ class CoreTest {
         assertEquals(Skins.CLASSIC.eyes, p.px[(Clawd.ORIGIN_Y + 2) * p.w + Clawd.ORIGIN_X + 5])
         assertEquals(Pix.color("#FBBF24"), p.px[(Clawd.ORIGIN_Y - 1) * p.w + Clawd.ORIGIN_X + 5])
         for (t in Themes.ALL) for (h in intArrayOf(3, 12, 20)) {
-            Scenes.background(t.scene, 140, h)
-            for (k in 0 until Scenes.FX_FRAMES) Scenes.fx(t.scene, 140, h, k)
+            val bg = Scenes.background(t.scene, 140, h)
+            val beats = Stage.loop(Clawd.Mood.IDLE, 6, 40, 140)
+            for (k in beats.indices) Stage.compose(bg, t.scene, h, k, beats.size, beats[k], crown)
         }
+    }
+
+    /** Loops must be seamless: full length, and the crab ends where he started, standing normally. */
+    @Test fun loopsAreSeamless() {
+        for (m in Clawd.Mood.values()) for (h in 0..6) for (w in intArrayOf(40, 90, 160)) for (pct in intArrayOf(0, 50, 100)) {
+            val home = Stage.home(w, pct)
+            val b = Stage.loop(m, h, home, w)
+            assertEquals(Stage.LOOP, b.size)
+            assertEquals("$m $h $w $pct", b.first().x, b.last().x)
+            for (beat in b) assertTrue(beat.x in 0..Stage.maxX(w))
+            // Walking never takes both legs off the ground on consecutive frames.
+            for (i in 1 until b.size) assertTrue(b[i - 1].f.feet == "both" || b[i].f.feet == "both" || b[i - 1].f.flip)
+        }
+    }
+
+    @Test fun mergesBothApiShapes() {
+        val json = JSONObject(
+            """{"five_hour":{"utilization":12,"resets_at":"2026-10-22T18:00:00Z"},
+                "seven_day":{"utilization":30,"resets_at":"2026-10-26T05:59:00Z"},
+                "seven_day_opus":{"utilization":3,"resets_at":null},
+                "seven_day_sonnet":null,
+                "seven_day_oauth_apps":{"utilization":50},
+                "limits":[{"kind":"weekly_scoped","percent":22,"resets_at":null,"scope":{"model":{"display_name":"Fable"}}}]}"""
+        )
+        val u = Usage.parse(json)
+        assertEquals(12, u.session!!.percent)
+        assertEquals(30, u.weekly!!.percent)
+        assertEquals(listOf("Fable", "Opus"), u.models.map { it.label })
+        assertEquals("Fable", u.topModel!!.label)
     }
 }

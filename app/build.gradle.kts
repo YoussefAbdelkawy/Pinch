@@ -14,11 +14,11 @@ fun signingValue(key: String, env: String): String? =
     keystoreProps.getProperty(key) ?: System.getenv(env)
 
 android {
-    namespace = "dev.clawdusage.app"
+    namespace = "dev.pinch.app"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "dev.clawdusage.app"
+        applicationId = "dev.pinch.app"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
