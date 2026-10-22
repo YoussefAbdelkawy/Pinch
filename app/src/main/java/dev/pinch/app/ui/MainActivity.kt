@@ -7,6 +7,7 @@ import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
@@ -21,6 +22,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
@@ -59,6 +61,7 @@ class MainActivity : Activity() {
     private var busy = false
     private var statusText: TextView? = null
     private var codeInput: EditText? = null
+    private var widgetCount = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,6 +75,8 @@ class MainActivity : Activity() {
         // Opening the app is a good moment for fresh numbers, if the last ones are over a minute old.
         val age = System.currentTimeMillis() - (UsageRepo.cached(this).usage?.fetchedAt ?: 0L)
         if (ClaudeAuth.isSignedIn(this) && age > 60_000) refreshNow()
+        // A widget was added or removed while we were away (from the launcher or the pin dialog).
+        else if (ClawdWidget.ids(this).size != widgetCount) build()
     }
 
     override fun onDestroy() {
@@ -87,6 +92,9 @@ class MainActivity : Activity() {
         window.navigationBarColor = theme.bg
         val signedIn = ClaudeAuth.isSignedIn(this)
         val state = UsageRepo.cached(this)
+        // While the sign-in form is on screen, other apps' floating windows are hidden, so
+        // nothing can sit on top of it pretending to be part of it (Android 12+).
+        if (Build.VERSION.SDK_INT >= 31) window.setHideOverlayWindows(!signedIn || state.error == "auth_error")
 
         val col = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -124,8 +132,18 @@ class MainActivity : Activity() {
             } catch (_: Exception) {
                 holder.addView(text(getString(R.string.preview_unavailable), 13f, theme.muted))
             }
-            box.addView(button(getString(R.string.add_widget)) { pinWidget() }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
-            box.addView(text(getString(R.string.add_widget_hint), 12f, theme.muted).apply { setPadding(0, dp(6), 0, 0) })
+            // Already on the home screen: say so, and keep "add" as a quiet option for a second one.
+            val placed = ClawdWidget.ids(this).size
+            widgetCount = placed
+            if (placed > 0) {
+                box.addView(text(resources.getQuantityString(R.plurals.widget_placed, placed, placed), 14f, Themes.OK)
+                    .apply { setPadding(0, dp(10), 0, 0) })
+                box.addView(button(getString(R.string.add_another_widget), secondary = true) { pinWidget() },
+                    LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
+            } else {
+                box.addView(button(getString(R.string.add_widget)) { pinWidget() }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
+                box.addView(text(getString(R.string.add_widget_hint), 12f, theme.muted).apply { setPadding(0, dp(6), 0, 0) })
+            }
         })
 
         // Theme.
@@ -148,7 +166,7 @@ class MainActivity : Activity() {
         col.addView(card { box ->
             val flow = FlowLayout(this, dp(8))
             val cur = Settings.intervalMinutes(this)
-            for (m in intArrayOf(15, 30, 60)) flow.addView(chip(getString(R.string.minutes, m), theme.accent, cur == m) {
+            for (m in intArrayOf(5, 15, 30, 60)) flow.addView(chip(getString(R.string.minutes, m), theme.accent, cur == m) {
                 Settings.setIntervalMinutes(this, m)
                 RefreshWorker.schedule(this, replace = true)
                 build()
@@ -205,7 +223,11 @@ class MainActivity : Activity() {
             textSize = 14f
             // No suggestions, no learning: the keyboard must not remember the code.
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
-            if (Build.VERSION.SDK_INT >= 26) importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
+            importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
+            // Incognito keyboard: nothing typed here may feed the keyboard's personal dictionary.
+            imeOptions = EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
+            // Only real accessibility tools (screen readers) may read this field, not other apps.
+            if (Build.VERSION.SDK_INT >= 34) setAccessibilityDataSensitive(View.ACCESSIBILITY_DATA_SENSITIVE_YES)
             background = rounded(theme.bg, 10)
             setPadding(dp(12), dp(10), dp(12), dp(10))
             isSingleLine = true
@@ -255,7 +277,12 @@ class MainActivity : Activity() {
     private fun startSignIn() {
         val url = ClaudeAuth.buildLoginUrl(this)
         try {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                addCategory(Intent.CATEGORY_BROWSABLE)
+                // Straight to the user's own browser: an installed app that claims claude.com
+                // links can't put up a look-alike sign-in page and catch the password.
+                defaultBrowser()?.let { setPackage(it) }
+            })
             say(getString(R.string.after_approve), theme.text)
         } catch (_: ActivityNotFoundException) {
             say(getString(R.string.no_browser), Themes.CRIT)
@@ -340,6 +367,15 @@ class MainActivity : Activity() {
             if (clip == code && Build.VERSION.SDK_INT >= 28) cm.clearPrimaryClip()
         } catch (_: Exception) {
         }
+    }
+
+    /** The package of the browser that opens a plain web link, or null if there is no single default. */
+    private fun defaultBrowser(): String? {
+        val probe = Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com")).addCategory(Intent.CATEGORY_BROWSABLE)
+        val info = packageManager.resolveActivity(probe, PackageManager.MATCH_DEFAULT_ONLY) ?: return null
+        val pkg = info.activityInfo?.packageName ?: return null
+        // "android" means the system chooser: no default set, let Android ask as usual.
+        return pkg.takeIf { it != "android" }
     }
 
     private fun secure(on: Boolean) {
