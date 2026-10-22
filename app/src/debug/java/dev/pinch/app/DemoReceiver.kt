@@ -13,7 +13,7 @@ import dev.pinch.app.widget.ClawdWidget
  * Debug builds only: paints the widget with made-up numbers, for screenshots and for
  * checking every mood without an account. Never part of a release APK.
  *
- *   adb shell am broadcast -n dev.pinch.app/.DemoReceiver --ei session 42 --ei week 31 [--es theme halloween] [--es skin chef] [--ez party true] [--es trick spin]
+ *   adb shell am broadcast -n dev.pinch.app/.DemoReceiver --ei session 42 --ei week 31 [--es theme halloween] [--es skin chef] [--ez party true] [--es trick spin] [--ez app true]
  */
 class DemoReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -30,6 +30,12 @@ class DemoReceiver : BroadcastReceiver() {
             fetchedAt = now
         )
         val state = UsageRepo.State(usage, null, UsageRepo.ServiceStatus("none", "All Systems Operational"))
+        // --ez app true: the app itself also shows these numbers, as if signed in.
+        if (intent.hasExtra("app")) {
+            val on = intent.getBooleanExtra("app", false)
+            Settings.setDemo(context, on)
+            if (on) UsageRepo.store(context, usage, state.status)
+        }
         val act = when {
             intent.getBooleanExtra("party", false) -> Clawd.celebrate()
             else -> intent.getStringExtra("trick")?.let { Clawd.SEQS[it] }
