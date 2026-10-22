@@ -1,4 +1,4 @@
-package dev.clawdusage.app.data
+package dev.pinch.app.data
 
 import org.json.JSONObject
 import java.net.URL

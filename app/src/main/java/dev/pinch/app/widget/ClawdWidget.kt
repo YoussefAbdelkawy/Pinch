@@ -1,13 +1,13 @@
-package dev.clawdusage.app.widget
+package dev.pinch.app.widget
 
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.os.Bundle
-import dev.clawdusage.app.art.Frame
-import dev.clawdusage.app.auth.ClaudeAuth
-import dev.clawdusage.app.data.UsageRepo
+import dev.pinch.app.art.Frame
+import dev.pinch.app.auth.ClaudeAuth
+import dev.pinch.app.data.UsageRepo
 
 /**
  * The home screen widget. It only draws what is cached; the network work happens in

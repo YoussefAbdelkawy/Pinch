@@ -1,4 +1,4 @@
-package dev.clawdusage.app.art
+package dev.pinch.app.art
 
 import java.time.LocalDate
 import java.time.MonthDay

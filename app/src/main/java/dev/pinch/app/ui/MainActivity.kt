@@ -1,4 +1,4 @@
-package dev.clawdusage.app.ui
+package dev.pinch.app.ui
 
 import android.app.Activity
 import android.appwidget.AppWidgetManager
@@ -30,21 +30,21 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import dev.clawdusage.app.BuildConfig
-import dev.clawdusage.app.R
-import dev.clawdusage.app.Settings
-import dev.clawdusage.app.art.Clawd
-import dev.clawdusage.app.art.Frame
-import dev.clawdusage.app.art.Pix
-import dev.clawdusage.app.art.Scenes
-import dev.clawdusage.app.art.Skins
-import dev.clawdusage.app.art.Theme
-import dev.clawdusage.app.art.Themes
-import dev.clawdusage.app.auth.ClaudeAuth
-import dev.clawdusage.app.data.UsageRepo
-import dev.clawdusage.app.widget.ClawdWidget
-import dev.clawdusage.app.widget.RefreshWorker
-import dev.clawdusage.app.widget.WidgetRenderer
+import dev.pinch.app.BuildConfig
+import dev.pinch.app.R
+import dev.pinch.app.Settings
+import dev.pinch.app.art.Clawd
+import dev.pinch.app.art.Frame
+import dev.pinch.app.art.Pix
+import dev.pinch.app.art.Scenes
+import dev.pinch.app.art.Skins
+import dev.pinch.app.art.Theme
+import dev.pinch.app.art.Themes
+import dev.pinch.app.auth.ClaudeAuth
+import dev.pinch.app.data.UsageRepo
+import dev.pinch.app.widget.ClawdWidget
+import dev.pinch.app.widget.RefreshWorker
+import dev.pinch.app.widget.WidgetRenderer
 import java.util.concurrent.Executors
 
 /**
@@ -69,6 +69,9 @@ class MainActivity : Activity() {
         super.onResume()
         // Coming back from the browser with the code on the clipboard: point at the field.
         if (!ClaudeAuth.isSignedIn(this) && ClaudeAuth.hasPendingLogin(this)) codeInput?.requestFocus()
+        // Opening the app is a good moment for fresh numbers, if the last ones are over a minute old.
+        val age = System.currentTimeMillis() - (UsageRepo.cached(this).usage?.fetchedAt ?: 0L)
+        if (ClaudeAuth.isSignedIn(this) && age > 60_000) refreshNow()
     }
 
     override fun onDestroy() {
@@ -96,15 +99,9 @@ class MainActivity : Activity() {
         val clawd = ClawdView(this).apply {
             this.theme = this@MainActivity.theme
             skin = Settings.skin(this@MainActivity, this@MainActivity.theme)
-            val session = state.usage?.session
             halves = state.usage?.heartHalves ?: 6
-            position = session?.percent ?: 30
-            mood = when {
-                !signedIn || session == null -> Clawd.Mood.SLEEP
-                session.percent >= 100 -> Clawd.Mood.DEAD
-                session.percent >= 85 -> Clawd.Mood.CRIT
-                else -> Clawd.Mood.IDLE
-            }
+            position = if (signedIn) state.usage?.session?.percent else null
+            mood = WidgetRenderer.moodOf(state, signedIn)
             contentDescription = getString(R.string.clawd)
             clipToOutline = true
             background = rounded(theme.card, 14)
@@ -360,6 +357,7 @@ class MainActivity : Activity() {
         "state_mismatch" -> getString(R.string.err_state)
         "rate_limited" -> getString(R.string.err_rate)
         "offline" -> getString(R.string.err_offline)
+        "format_changed" -> getString(R.string.err_format)
         else -> getString(R.string.err_other, err ?: "?")
     }
 

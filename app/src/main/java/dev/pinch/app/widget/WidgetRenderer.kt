@@ -1,4 +1,4 @@
-package dev.clawdusage.app.widget
+package dev.pinch.app.widget
 
 import android.app.PendingIntent
 import android.content.Context
@@ -7,19 +7,20 @@ import android.graphics.Bitmap
 import android.os.SystemClock
 import android.view.View
 import android.widget.RemoteViews
-import dev.clawdusage.app.R
-import dev.clawdusage.app.Settings
-import dev.clawdusage.app.art.Clawd
-import dev.clawdusage.app.art.Frame
-import dev.clawdusage.app.art.Pix
-import dev.clawdusage.app.art.Scenes
-import dev.clawdusage.app.art.Skin
-import dev.clawdusage.app.art.Theme
-import dev.clawdusage.app.art.Themes
-import dev.clawdusage.app.data.Level
-import dev.clawdusage.app.data.Limit
-import dev.clawdusage.app.data.UsageRepo
-import dev.clawdusage.app.ui.MainActivity
+import dev.pinch.app.R
+import dev.pinch.app.Settings
+import dev.pinch.app.art.Clawd
+import dev.pinch.app.art.Frame
+import dev.pinch.app.art.Pix
+import dev.pinch.app.art.Scenes
+import dev.pinch.app.art.Skin
+import dev.pinch.app.art.Stage
+import dev.pinch.app.art.Theme
+import dev.pinch.app.art.Themes
+import dev.pinch.app.data.Level
+import dev.pinch.app.data.Limit
+import dev.pinch.app.data.UsageRepo
+import dev.pinch.app.ui.MainActivity
 import java.text.DateFormat
 import java.time.Instant
 import java.time.LocalDateTime
@@ -40,8 +41,6 @@ object WidgetRenderer {
     /** dp per logical pixel of Clawd and the scenes. */
     private const val DP_PER_PX = 2
     private const val CRAB_SCALE = 4
-    private const val STAGE_SCALE = 4
-    private const val FX_SCALE = 2
     private const val LEFT_COLUMN_DP = 76
     private const val SIDE_PADDING_DP = 28
 
@@ -111,36 +110,27 @@ object WidgetRenderer {
             }
         } else v.setViewVisibility(R.id.hearts, View.GONE)
 
-        // ---- the stage: backdrop, animated overlay, Clawd
+        // ---- the stage: one seamless loop of composed frames (scene + moving things + crab)
         val stageDp = (widthDp - SIDE_PADDING_DP - LEFT_COLUMN_DP).coerceAtLeast(80)
         val stageW = stageDp / DP_PER_PX
         val hour = LocalDateTime.now().hour
-        v.setImageViewBitmap(R.id.stage_bg, Scenes.background(theme.scene, stageW, hour).toBitmap(STAGE_SCALE, Bitmap.Config.RGB_565))
-        v.removeAllViews(R.id.stage_fx)
-        for (k in 0 until Scenes.FX_FRAMES) {
-            v.addView(R.id.stage_fx, frame(context, Scenes.fx(theme.scene, stageW, hour, k).toBitmap(FX_SCALE)))
+        val mood = moodOf(state, signedIn)
+        val home = Stage.home(stageW, if (authProblem) null else session?.percent)
+        val beats = if (act != null) Stage.act(act, home, stageW) else Stage.loop(mood, halves ?: 6, home, stageW)
+        // The launcher caps a widget's bitmaps at about 1.5 screens of pixels: pick the
+        // sharpest scale that keeps the loop well inside that, else skip every other frame.
+        val dm = context.resources.displayMetrics
+        val budget = dm.widthPixels.toLong() * dm.heightPixels * 4 * 3 / 2 / 2
+        fun cost(scale: Int, frames: Int) = stageW.toLong() * scale * Scenes.H * scale * 2 * frames
+        val scale = (4 downTo 2).firstOrNull { cost(it, beats.size) <= budget } ?: 2
+        val stride = if (cost(scale, beats.size) <= budget) 1 else 2
+        val bg = Scenes.background(theme.scene, stageW, hour)
+        v.removeAllViews(R.id.stage_anim)
+        for (t in beats.indices step stride) {
+            val pix = Stage.compose(bg, theme.scene, hour, t, beats.size, beats[t], look.skin)
+            v.addView(R.id.stage_anim, frame(context, pix.toBitmap(scale, Bitmap.Config.RGB_565)))
         }
-
-        val mood = when {
-            authProblem || session == null -> Clawd.Mood.SLEEP
-            session.percent >= 100 -> Clawd.Mood.DEAD
-            session.resetsAt == null -> Clawd.Mood.SLEEP // the 5-hour window has not started
-            session.percent >= 85 -> Clawd.Mood.CRIT
-            else -> Clawd.Mood.IDLE
-        }
-        val frames = act ?: Clawd.moodLoop(mood, halves ?: 6)
-        val sand = Scenes.sand(theme.scene)
-        val cache = HashMap<Frame, Bitmap>()
-        v.removeAllViews(R.id.crab)
-        for (f in frames) {
-            val bmp = cache.getOrPut(f) { crabBitmap(f, look.skin, sand) }
-            v.addView(R.id.crab, frame(context, bmp))
-        }
-        // Clawd walks along the stage as the session fills up.
-        val pct = session?.percent?.coerceIn(0, 100) ?: 15
-        val travel = (stageW - Clawd.CANVAS_W).coerceAtLeast(0)
-        val xDp = travel * pct / 100 * DP_PER_PX
-        v.setViewPadding(R.id.crab_holder, dpToPx(context, xDp), 0, 0, 0)
+        v.setInt(R.id.stage_anim, "setFlipInterval", (Stage.FRAME_MS * stride).toInt())
 
         // ---- session bar and its reset countdown
         bar(v, "session", session?.percent, authProblem)
@@ -149,6 +139,7 @@ object WidgetRenderer {
         when {
             !signedIn -> note(v, context.getString(R.string.tap_to_sign_in), Themes.WARN)
             state.error == "auth_error" -> note(v, context.getString(R.string.sign_in_again), Themes.CRIT)
+            state.error == "format_changed" -> note(v, context.getString(R.string.api_changed), Themes.WARN)
             session == null -> note(v, context.getString(if (state.error != null) R.string.no_data_offline else R.string.loading), theme.text)
             session.resetsAt == null -> note(v, context.getString(R.string.window_not_started), theme.text)
             session.resetsAt <= System.currentTimeMillis() -> note(v, context.getString(R.string.resetting), theme.text)
@@ -176,7 +167,12 @@ object WidgetRenderer {
         val top = usage?.topModel
         v.setTextViewText(
             R.id.model_value,
-            if (top != null && !authProblem) "${top.label} · ${top.percent}%" else context.getString(R.string.no_data)
+            when {
+                authProblem || usage == null -> context.getString(R.string.no_data)
+                top != null -> "${top.label} · ${top.percent}%"
+                // Signed in, but the account has no separate per-model limit.
+                else -> context.getString(R.string.no_model_limit)
+            }
         )
 
         // ---- footer
@@ -192,8 +188,8 @@ object WidgetRenderer {
         v.setTextViewText(R.id.updated, updatedText(context, state))
 
         // ---- fit the height we have
-        v.setViewVisibility(R.id.footer, if (heightDp >= 200 && status != null) View.VISIBLE else View.GONE)
-        v.setViewVisibility(R.id.model_row, if (heightDp >= 170) View.VISIBLE else View.GONE)
+        v.setViewVisibility(R.id.footer, if (heightDp >= 235 && status != null) View.VISIBLE else View.GONE)
+        v.setViewVisibility(R.id.model_row, if (heightDp >= 175) View.VISIBLE else View.GONE)
         val showWeek = heightDp >= 140
         v.setViewVisibility(R.id.week_row, if (showWeek) View.VISIBLE else View.GONE)
         v.setViewVisibility(R.id.week_bars, if (showWeek) View.VISIBLE else View.GONE)
@@ -211,6 +207,18 @@ object WidgetRenderer {
             if (authProblem) open else WidgetActions.pending(context, WidgetActions.ACTION_TAP)
         )
         return v
+    }
+
+    /** How the crab feels, from the numbers. */
+    fun moodOf(state: UsageRepo.State, signedIn: Boolean): Clawd.Mood {
+        val session = state.usage?.session
+        return when {
+            !signedIn || state.error == "auth_error" || session == null -> Clawd.Mood.SLEEP
+            session.percent >= 100 -> Clawd.Mood.DEAD
+            session.resetsAt == null -> Clawd.Mood.SLEEP // the 5-hour window has not started
+            session.percent >= 85 -> Clawd.Mood.CRIT
+            else -> Clawd.Mood.IDLE
+        }
     }
 
     /** Clawd's frame with the ground rows under him, so his feet land on the stage's ground. */
@@ -311,7 +319,6 @@ object WidgetRenderer {
         else -> 0
     }
 
-    private fun dpToPx(context: Context, dp: Int) = (dp * context.resources.displayMetrics.density).toInt()
 
     /** A notch lighter, for labels that should read a bit stronger than captions. */
     private fun Int.brighter(): Int = Pix.mix(this, 0xFFFFFFFF.toInt(), 0.25f)

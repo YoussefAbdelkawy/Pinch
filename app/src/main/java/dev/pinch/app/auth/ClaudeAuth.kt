@@ -1,9 +1,9 @@
-package dev.clawdusage.app.auth
+package dev.pinch.app.auth
 
 import android.content.Context
 import android.net.Uri
 import android.util.Base64
-import dev.clawdusage.app.data.Http
+import dev.pinch.app.data.Http
 import org.json.JSONObject
 import java.security.MessageDigest
 import java.security.SecureRandom

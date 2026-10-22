@@ -1,4 +1,4 @@
-package dev.clawdusage.app.ui
+package dev.pinch.app.ui
 
 import android.content.Context
 import android.view.ViewGroup

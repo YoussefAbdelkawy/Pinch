@@ -1,20 +1,19 @@
-package dev.clawdusage.app
+package dev.pinch.app
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import dev.clawdusage.app.art.Clawd
-import dev.clawdusage.app.art.everyOther
-import dev.clawdusage.app.data.Limit
-import dev.clawdusage.app.data.Usage
-import dev.clawdusage.app.data.UsageRepo
-import dev.clawdusage.app.widget.ClawdWidget
+import dev.pinch.app.art.Clawd
+import dev.pinch.app.data.Limit
+import dev.pinch.app.data.Usage
+import dev.pinch.app.data.UsageRepo
+import dev.pinch.app.widget.ClawdWidget
 
 /**
  * Debug builds only: paints the widget with made-up numbers, for screenshots and for
  * checking every mood without an account. Never part of a release APK.
  *
- *   adb shell am broadcast -n dev.clawdusage.app/.DemoReceiver --ei session 42 --ei week 31 [--es theme halloween] [--ez party true]
+ *   adb shell am broadcast -n dev.pinch.app/.DemoReceiver --ei session 42 --ei week 31 [--es theme halloween] [--ez party true]
  */
 class DemoReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -31,7 +30,7 @@ class DemoReceiver : BroadcastReceiver() {
             fetchedAt = now
         )
         val state = UsageRepo.State(usage, null, UsageRepo.ServiceStatus("none", "All Systems Operational"))
-        val party = if (intent.getBooleanExtra("party", false)) Clawd.celebrate().everyOther() else null
+        val party = if (intent.getBooleanExtra("party", false)) Clawd.celebrate() else null
         ClawdWidget.updateAll(context, state, party, signedIn = true)
     }
 }

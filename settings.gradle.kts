@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ClawdUsageAndroid"
+rootProject.name = "Pinch"
 include(":app")

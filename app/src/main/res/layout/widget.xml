@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Clawd Usage widget. Colours are set from code per theme; these are the classic ones. -->
+<!-- Pinch widget. Colours are set from code per theme; these are the classic ones. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@android:id/background"
     android:layout_width="match_parent"
@@ -123,34 +123,13 @@
                 android:layout_weight="1"
                 android:contentDescription="@string/clawd">
 
-                <ImageView
-                    android:id="@+id/stage_bg"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:importantForAccessibility="no"
-                    android:scaleType="centerCrop" />
-
+                <!-- The whole stage, one composed frame per child, flipped by the launcher. -->
                 <ViewFlipper
-                    android:id="@+id/stage_fx"
+                    android:id="@+id/stage_anim"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:autoStart="true"
-                    android:flipInterval="450" />
-
-                <LinearLayout
-                    android:id="@+id/crab_holder"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:gravity="bottom|start"
-                    android:orientation="horizontal">
-
-                    <ViewFlipper
-                        android:id="@+id/crab"
-                        android:layout_width="60dp"
-                        android:layout_height="46dp"
-                        android:autoStart="true"
-                        android:flipInterval="120" />
-                </LinearLayout>
+                    android:flipInterval="100" />
             </FrameLayout>
         </LinearLayout>
 

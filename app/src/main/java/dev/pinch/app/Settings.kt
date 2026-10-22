@@ -1,10 +1,10 @@
-package dev.clawdusage.app
+package dev.pinch.app
 
 import android.content.Context
-import dev.clawdusage.app.art.Skin
-import dev.clawdusage.app.art.Skins
-import dev.clawdusage.app.art.Theme
-import dev.clawdusage.app.art.Themes
+import dev.pinch.app.art.Skin
+import dev.pinch.app.art.Skins
+import dev.pinch.app.art.Theme
+import dev.pinch.app.art.Themes
 
 /** The user's look choices. Not secret; plain app-private preferences. */
 object Settings {

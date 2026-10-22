@@ -1,4 +1,4 @@
-package dev.clawdusage.app.auth
+package dev.pinch.app.auth
 
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec

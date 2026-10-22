@@ -1,7 +1,7 @@
-package dev.clawdusage.app.data
+package dev.pinch.app.data
 
 import android.content.Context
-import dev.clawdusage.app.auth.ClaudeAuth
+import dev.pinch.app.auth.ClaudeAuth
 import org.json.JSONObject
 
 /**
@@ -68,9 +68,12 @@ object UsageRepo {
         }
         return when {
             r.code == 200 && r.body != null -> try {
-                Usage.parse(JSONObject(r.body)) to null
+                val u = Usage.parse(JSONObject(r.body))
+                // A 200 with none of the fields we know means Anthropic reshaped the endpoint:
+                // say so plainly instead of showing old numbers as if nothing happened.
+                if (u.session == null && u.weekly == null && u.models.isEmpty()) null to "format_changed" else u to null
             } catch (_: Exception) {
-                null to "bad_response"
+                null to "format_changed"
             }
             r.code == -1 -> null to "offline"
             r.code == 401 || r.code == 403 -> null to "auth_error"
