@@ -14,7 +14,21 @@ class WidgetActions : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            ACTION_REFRESH -> RefreshWorker.refreshNow(context)
+            ACTION_REFRESH -> {
+                // Turn the arrow first, so the tap is answered at once; the worker's redraw stops it.
+                // In that order, so the spinner can never land after the worker's final redraw.
+                val app = context.applicationContext
+                val pending = goAsync()
+                Thread {
+                    try {
+                        ClawdWidget.updateAll(app, refreshing = true)
+                    } catch (_: Exception) {
+                    } finally {
+                        RefreshWorker.refreshFromTap(app)
+                        pending.finish()
+                    }
+                }.start()
+            }
             ACTION_TAP -> {
                 // Tapping Clawd plays one of Claude Code's click animations, then he goes back to his mood.
                 val name = Clawd.TAP_ACTS.random()
