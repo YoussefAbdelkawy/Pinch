@@ -38,31 +38,35 @@ class ClawdWidget : AppWidgetProvider() {
         fun ids(context: Context): IntArray =
             AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, ClawdWidget::class.java))
 
-        /** Redraws every Clawd widget, optionally playing a one-shot animation. */
+        /**
+         * Redraws every Clawd widget, optionally playing a one-shot animation.
+         * @param refreshing turns the refresh arrow until the next redraw.
+         */
         fun updateAll(
             context: Context,
             state: UsageRepo.State = UsageRepo.cached(context),
             act: List<Frame>? = null,
-            signedIn: Boolean = ClaudeAuth.isSignedIn(context)
+            signedIn: Boolean = ClaudeAuth.isSignedIn(context),
+            refreshing: Boolean = false
         ) {
             val manager = AppWidgetManager.getInstance(context)
-            for (id in ids(context)) render(context, manager, id, state, signedIn, act)
+            for (id in ids(context)) render(context, manager, id, state, signedIn, act, refreshing)
         }
 
         private fun render(
             context: Context, manager: AppWidgetManager, id: Int,
-            state: UsageRepo.State, signedIn: Boolean, act: List<Frame>?
+            state: UsageRepo.State, signedIn: Boolean, act: List<Frame>?, refreshing: Boolean = false
         ) {
             val o = manager.getAppWidgetOptions(id)
             // Portrait: width is the minimum, height the maximum the launcher reports.
             val w = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0).takeIf { it > 0 } ?: 300
             val h = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0).takeIf { it > 0 } ?: 200
             try {
-                manager.updateAppWidget(id, WidgetRenderer.build(context, state, signedIn, w, h, act))
+                manager.updateAppWidget(id, WidgetRenderer.build(context, state, signedIn, w, h, act, refreshing = refreshing))
             } catch (_: RuntimeException) {
                 // Too much for the launcher (bitmap budget): fall back to a still Clawd.
                 val still = (act ?: listOf(Frame())).take(1)
-                manager.updateAppWidget(id, WidgetRenderer.build(context, state, signedIn, w, h, still))
+                manager.updateAppWidget(id, WidgetRenderer.build(context, state, signedIn, w, h, still, refreshing = refreshing))
             }
         }
     }

@@ -7,6 +7,7 @@ import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -15,6 +16,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
@@ -62,6 +64,17 @@ class MainActivity : Activity() {
     private var statusText: TextView? = null
     private var codeInput: EditText? = null
     private var widgetCount = -1
+    /** Which numbers the screen shows, so a refresh made elsewhere (the widget, the background) is noticed. */
+    private var shown: String? = null
+
+    private val redraw = Runnable { if (!busy && !isFinishing && stamp(UsageRepo.cached(this)) != shown) build() }
+    // One refresh writes several keys: wait for the last before redrawing.
+    private val usageChanged = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        main.removeCallbacks(redraw)
+        main.postDelayed(redraw, 150)
+    }
+
+    private fun stamp(s: UsageRepo.State) = "${s.usage?.fetchedAt}|${s.error}|${s.status?.indicator}|${s.status?.description}"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,8 +95,17 @@ class MainActivity : Activity() {
         // Opening the app is a good moment for fresh numbers, if the last ones are over a minute old.
         val age = System.currentTimeMillis() - (UsageRepo.cached(this).usage?.fetchedAt ?: 0L)
         if (ClaudeAuth.isSignedIn(this) && age > 60_000) refreshNow()
-        // A widget was added or removed while we were away (from the launcher or the pin dialog).
-        else if (ClawdWidget.ids(this).size != widgetCount) build()
+        // A widget was added or removed while we were away (from the launcher or the pin dialog),
+        // or the widget's refresh button fetched new numbers.
+        else if (ClawdWidget.ids(this).size != widgetCount || stamp(UsageRepo.cached(this)) != shown) build()
+        // While on screen, show what a background refresh fetches.
+        UsageRepo.listen(this, usageChanged)
+    }
+
+    override fun onPause() {
+        UsageRepo.unlisten(this, usageChanged)
+        main.removeCallbacks(redraw)
+        super.onPause()
     }
 
     override fun onDestroy() {
@@ -99,6 +121,7 @@ class MainActivity : Activity() {
         window.navigationBarColor = theme.bg
         val signedIn = ClaudeAuth.isSignedIn(this)
         val state = UsageRepo.cached(this)
+        shown = stamp(state)
 
         val col = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -176,6 +199,19 @@ class MainActivity : Activity() {
                 build()
             })
             box.addView(flow)
+            // Battery optimisation (and Battery Saver on top of it) can hold background refreshes
+            // back for an hour or more. "Unrestricted" lifts that; no permission needed to point there.
+            if (!getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(packageName)) {
+                box.addView(text(getString(R.string.battery_hint), 13f, theme.muted).apply { setPadding(0, dp(12), 0, 0) })
+                box.addView(button(getString(R.string.battery_open), secondary = true) {
+                    try {
+                        startActivity(
+                            Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))
+                        )
+                    } catch (_: ActivityNotFoundException) {
+                    }
+                }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
+            }
         })
 
         // Footer: version, not affiliated, and the credit the crab art's license asks for.

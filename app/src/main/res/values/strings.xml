@@ -64,6 +64,8 @@
     <string name="skin">Crab skin</string>
     <string name="skin_auto">Theme\'s pick</string>
     <string name="refresh_every">Refresh every</string>
+    <string name="battery_hint">Android holds background refreshes back to save battery, more so on Battery Saver. To keep the widget current, open app info, tap Battery and choose Unrestricted.</string>
+    <string name="battery_open">Open app info</string>
     <string name="minutes">%d min</string>
 
     <string name="disclaimer">v%s · Not affiliated with or endorsed by Anthropic. Crab art adapted from clawd-usage-winwidget (MIT).</string>
