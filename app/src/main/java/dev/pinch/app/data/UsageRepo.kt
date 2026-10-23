@@ -1,6 +1,7 @@
 package dev.pinch.app.data
 
 import android.content.Context
+import android.content.SharedPreferences
 import dev.pinch.app.Settings
 import dev.pinch.app.auth.ClaudeAuth
 import org.json.JSONObject
@@ -66,6 +67,13 @@ object UsageRepo {
     }
 
     fun clear(context: Context) = prefs(context).edit().clear().commit()
+
+    /** Told whenever stored numbers change (a refresh from the widget or the background). Keep a reference: it is held weakly. */
+    fun listen(context: Context, l: SharedPreferences.OnSharedPreferenceChangeListener) =
+        prefs(context).registerOnSharedPreferenceChangeListener(l)
+
+    fun unlisten(context: Context, l: SharedPreferences.OnSharedPreferenceChangeListener) =
+        prefs(context).unregisterOnSharedPreferenceChangeListener(l)
 
     private fun fetchUsage(context: Context): Pair<Usage?, String?> {
         val token = ClaudeAuth.accessToken(context) ?: return null to (ClaudeAuth.lastError ?: "auth_error")

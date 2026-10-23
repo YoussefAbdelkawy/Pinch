@@ -3,6 +3,7 @@ package dev.pinch.app.widget
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.SystemClock
@@ -71,17 +72,19 @@ object WidgetRenderer {
         act: List<Frame>? = null,
         look: Look = look(context),
         /** False for the in-app preview, which has a fixed size and wants that one layout. */
-        responsive: Boolean = true
+        responsive: Boolean = true,
+        /** The refresh arrow turns while a refresh the user asked for is running. */
+        refreshing: Boolean = false
     ): RemoteViews {
         val art = art(context, state, signedIn, widthDp, act, look)
         // Android 12+: hand the launcher one layout per height and let it pick the one that
         // fits the widget's real size, so no row is ever cut off, whatever the launcher reports.
         if (responsive && Build.VERSION.SDK_INT >= 31) {
             return RemoteViews(LAYOUT_HEIGHTS.associate { h ->
-                SizeF(120f, h.toFloat()) to one(context, state, signedIn, h, look, art)
+                SizeF(120f, h.toFloat()) to one(context, state, signedIn, h, look, art, refreshing)
             })
         }
-        return one(context, state, signedIn, heightDp, look, art)
+        return one(context, state, signedIn, heightDp, look, art, refreshing)
     }
 
     private fun art(
@@ -121,7 +124,8 @@ object WidgetRenderer {
     }
 
     private fun one(
-        context: Context, state: UsageRepo.State, signedIn: Boolean, heightDp: Int, look: Look, art: Art
+        context: Context, state: UsageRepo.State, signedIn: Boolean, heightDp: Int, look: Look, art: Art,
+        refreshing: Boolean
     ): RemoteViews {
         val theme = look.theme
         val v = RemoteViews(context.packageName, R.layout.widget)
@@ -142,6 +146,11 @@ object WidgetRenderer {
         for (id in intArrayOf(R.id.session_reset, R.id.session_note, R.id.model_value, R.id.status)) v.setTextColor(id, theme.text)
         v.setTextColor(R.id.updated, theme.faint.brighter())
         v.setInt(R.id.refresh, "setColorFilter", theme.muted)
+        v.setViewVisibility(R.id.refresh, if (refreshing) View.GONE else View.VISIBLE)
+        v.setViewVisibility(R.id.refreshing, if (refreshing) View.VISIBLE else View.GONE)
+        if (Build.VERSION.SDK_INT >= 31) {
+            v.setColorStateList(R.id.refreshing, "setIndeterminateTintList", ColorStateList.valueOf(theme.muted))
+        }
 
         // ---- header
         v.setTextViewText(R.id.plan, usage?.plan?.takeIf { it.isNotEmpty() }?.let { "· $it" } ?: "")

@@ -1,6 +1,7 @@
 package dev.pinch.app.widget
 
 import android.content.Context
+import android.os.Build
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -8,9 +9,11 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import dev.pinch.app.Settings
 import dev.pinch.app.art.Clawd
 import dev.pinch.app.auth.ClaudeAuth
@@ -37,6 +40,8 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
             delay(party.size * Clawd.FRAME_MS + 300)
         }
         ClawdWidget.updateAll(ctx, state)
+        // A tap already showed its answer (an error line); retrying it would only spin quietly.
+        if (inputData.getBoolean(KEY_TAP, false)) return Result.success()
         return when (state.error) {
             null, "auth_error" -> Result.success()
             else -> Result.retry()
@@ -46,6 +51,8 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
     companion object {
         private const val PERIODIC = "clawd_periodic_refresh"
         private const val NOW = "clawd_refresh_now"
+        private const val TAP = "clawd_refresh_tap"
+        private const val KEY_TAP = "tap"
 
         private val network = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
@@ -63,11 +70,30 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
             )
         }
 
+        /**
+         * A background refresh (the 5-minute alarm, a new widget). KEEP, not REPLACE: replacing
+         * cancelled a refresh that was already halfway through its network call.
+         */
         fun refreshNow(context: Context) {
             val work = OneTimeWorkRequestBuilder<RefreshWorker>()
                 .setConstraints(network)
                 .build()
-            WorkManager.getInstance(context).enqueueUniqueWork(NOW, ExistingWorkPolicy.REPLACE, work)
+            WorkManager.getInstance(context).enqueueUniqueWork(NOW, ExistingWorkPolicy.KEEP, work)
+        }
+
+        /**
+         * The widget's refresh button. A plain job waits for the system's next batch, which on
+         * Battery Saver or in Doze can be an hour, and a broadcast receiver gets no network there.
+         * Android 12+ runs an expedited job right away, with network, even on Battery Saver.
+         * (Below 12 an expedited job needs a foreground notification, so it stays a plain job.)
+         * No network constraint: offline, the worker still runs, stops the spinner and says so.
+         */
+        fun refreshFromTap(context: Context) {
+            val work = OneTimeWorkRequestBuilder<RefreshWorker>()
+                .setInputData(workDataOf(KEY_TAP to true))
+                .apply { if (Build.VERSION.SDK_INT >= 31) setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST) }
+                .build()
+            WorkManager.getInstance(context).enqueueUniqueWork(TAP, ExistingWorkPolicy.KEEP, work)
         }
 
         fun cancel(context: Context) {

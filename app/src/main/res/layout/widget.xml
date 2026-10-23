@@ -71,6 +71,20 @@
                 android:paddingTop="2dp"
                 android:paddingBottom="2dp"
                 android:src="@drawable/ic_refresh" />
+
+            <!-- Takes the arrow's place while a refresh runs. Square content so the arrow turns round. -->
+            <ProgressBar
+                android:id="@+id/refreshing"
+                android:layout_width="28dp"
+                android:layout_height="22dp"
+                android:indeterminate="true"
+                android:indeterminateDrawable="@drawable/refresh_spin"
+                android:indeterminateTint="#FF8B8B94"
+                android:paddingStart="9dp"
+                android:paddingEnd="1dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:visibility="gone" />
         </LinearLayout>
 
         <!-- Big number + the stage Clawd walks on -->
