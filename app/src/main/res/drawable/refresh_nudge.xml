@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The refresh arrow giving one quick turn when tapped, then resting where it started. Plays once:
+     the widget's ProgressBar starts it when it appears. -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="16dp"
+            android:height="16dp"
+            android:viewportWidth="24"
+            android:viewportHeight="24">
+            <group
+                android:name="arrow"
+                android:pivotX="12"
+                android:pivotY="12">
+                <path
+                    android:fillColor="#FFFFFFFF"
+                    android:pathData="M17.65,6.35A7.96,7.96 0,0 0,12 4a8,8 0,1 0,7.73 10h-2.08A6,6 0,1 1,12 6c1.66,0 3.14,0.69 4.22,1.78L13,11h7V4l-2.35,2.35z" />
+            </group>
+        </vector>
+    </aapt:attr>
+    <target android:name="arrow">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="450"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="rotation"
+                android:valueFrom="0"
+                android:valueTo="360" />
+        </aapt:attr>
+    </target>
+</animated-vector>

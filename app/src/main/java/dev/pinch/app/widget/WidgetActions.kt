@@ -15,16 +15,16 @@ class WidgetActions : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             ACTION_REFRESH -> {
-                // Turn the arrow first, so the tap is answered at once; the worker's redraw stops it.
-                // In that order, so the spinner can never land after the worker's final redraw.
+                // Start fetching first, then nudge the arrow while the numbers are on their way.
+                // The nudge rests where the arrow started, so it may land before or after the result.
                 val app = context.applicationContext
+                RefreshWorker.refreshFromTap(app)
                 val pending = goAsync()
                 Thread {
                     try {
-                        ClawdWidget.updateAll(app, refreshing = true)
+                        ClawdWidget.updateAll(app, nudge = true)
                     } catch (_: Exception) {
                     } finally {
-                        RefreshWorker.refreshFromTap(app)
                         pending.finish()
                     }
                 }.start()

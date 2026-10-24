@@ -72,13 +72,13 @@
                 android:paddingBottom="2dp"
                 android:src="@drawable/ic_refresh" />
 
-            <!-- Takes the arrow's place while a refresh runs. Square content so the arrow turns round. -->
+            <!-- Shown for a tap: the arrow gives one quick turn. Square content so it turns round. -->
             <ProgressBar
-                android:id="@+id/refreshing"
+                android:id="@+id/refresh_nudge"
                 android:layout_width="28dp"
                 android:layout_height="22dp"
                 android:indeterminate="true"
-                android:indeterminateDrawable="@drawable/refresh_spin"
+                android:indeterminateDrawable="@drawable/refresh_nudge"
                 android:indeterminateTint="#FF8B8B94"
                 android:paddingStart="9dp"
                 android:paddingEnd="1dp"
