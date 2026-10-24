@@ -73,18 +73,18 @@ object WidgetRenderer {
         look: Look = look(context),
         /** False for the in-app preview, which has a fixed size and wants that one layout. */
         responsive: Boolean = true,
-        /** The refresh arrow turns while a refresh the user asked for is running. */
-        refreshing: Boolean = false
+        /** The refresh arrow gives one quick turn: the answer to a tap on it. */
+        nudge: Boolean = false
     ): RemoteViews {
         val art = art(context, state, signedIn, widthDp, act, look)
         // Android 12+: hand the launcher one layout per height and let it pick the one that
         // fits the widget's real size, so no row is ever cut off, whatever the launcher reports.
         if (responsive && Build.VERSION.SDK_INT >= 31) {
             return RemoteViews(LAYOUT_HEIGHTS.associate { h ->
-                SizeF(120f, h.toFloat()) to one(context, state, signedIn, h, look, art, refreshing)
+                SizeF(120f, h.toFloat()) to one(context, state, signedIn, h, look, art, nudge)
             })
         }
-        return one(context, state, signedIn, heightDp, look, art, refreshing)
+        return one(context, state, signedIn, heightDp, look, art, nudge)
     }
 
     private fun art(
@@ -108,10 +108,14 @@ object WidgetRenderer {
         val hour = LocalDateTime.now().hour
         val mood = moodOf(state, signedIn)
         val home = Stage.home(stageW, if (authProblem) null else session?.percent)
+        val dm = context.resources.displayMetrics
+        // Drawing the loop is the slow part of a redraw. A refresh that changed only text (or
+        // nothing) reuses the last loop, so its numbers show at once. One-shot acts are not kept.
+        val key = "${theme.id}|${look.skin.id}|$stageW|$hour|$mood|$halves|$home|${dm.widthPixels}x${dm.heightPixels}"
+        if (act == null) lastArt?.let { (k, art) -> if (k == key) return art }
         val beats = if (act != null) Stage.act(act, home, stageW) else Stage.loop(mood, halves ?: 6, home, stageW, look.skin.id)
         // The launcher caps a widget's bitmaps at about 1.5 screens of pixels: pick the
         // sharpest scale that keeps the loop inside 70% of that, else skip every other frame.
-        val dm = context.resources.displayMetrics
         val budget = dm.widthPixels.toLong() * dm.heightPixels * 4 * 3 / 2 * 7 / 10
         fun cost(scale: Int, frames: Int) = stageW.toLong() * scale * Scenes.H * scale * 2 * frames
         val scale = (4 downTo 2).firstOrNull { cost(it, beats.size) <= budget } ?: 2
@@ -120,12 +124,16 @@ object WidgetRenderer {
         val frames = beats.indices.step(stride).map { t ->
             Stage.compose(bg, theme.scene, hour, t, beats.size, beats[t], look.skin).toBitmap(scale, Bitmap.Config.RGB_565)
         }
-        return Art(frames, (Stage.FRAME_MS * stride).toInt(), hearts)
+        return Art(frames, (Stage.FRAME_MS * stride).toInt(), hearts).also { if (act == null) lastArt = key to it }
     }
+
+    /** The last mood loop drawn, with what it was drawn from. */
+    @Volatile
+    private var lastArt: Pair<String, Art>? = null
 
     private fun one(
         context: Context, state: UsageRepo.State, signedIn: Boolean, heightDp: Int, look: Look, art: Art,
-        refreshing: Boolean
+        nudge: Boolean
     ): RemoteViews {
         val theme = look.theme
         val v = RemoteViews(context.packageName, R.layout.widget)
@@ -146,10 +154,10 @@ object WidgetRenderer {
         for (id in intArrayOf(R.id.session_reset, R.id.session_note, R.id.model_value, R.id.status)) v.setTextColor(id, theme.text)
         v.setTextColor(R.id.updated, theme.faint.brighter())
         v.setInt(R.id.refresh, "setColorFilter", theme.muted)
-        v.setViewVisibility(R.id.refresh, if (refreshing) View.GONE else View.VISIBLE)
-        v.setViewVisibility(R.id.refreshing, if (refreshing) View.VISIBLE else View.GONE)
+        v.setViewVisibility(R.id.refresh, if (nudge) View.GONE else View.VISIBLE)
+        v.setViewVisibility(R.id.refresh_nudge, if (nudge) View.VISIBLE else View.GONE)
         if (Build.VERSION.SDK_INT >= 31) {
-            v.setColorStateList(R.id.refreshing, "setIndeterminateTintList", ColorStateList.valueOf(theme.muted))
+            v.setColorStateList(R.id.refresh_nudge, "setIndeterminateTintList", ColorStateList.valueOf(theme.muted))
         }
 
         // ---- header

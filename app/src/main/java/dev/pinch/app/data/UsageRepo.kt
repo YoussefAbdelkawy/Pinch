@@ -5,6 +5,8 @@ import android.content.SharedPreferences
 import dev.pinch.app.Settings
 import dev.pinch.app.auth.ClaudeAuth
 import org.json.JSONObject
+import java.util.concurrent.FutureTask
+import java.util.concurrent.TimeUnit
 
 /**
  * Fetches usage and remembers the last good numbers. Only non-secret data lives here
@@ -15,6 +17,7 @@ object UsageRepo {
     private const val USAGE_URL = "https://api.anthropic.com/api/oauth/usage"
     private const val STATUS_URL = "https://status.claude.com/api/v2/summary.json"
     private const val PREFS = "usage_cache"
+    private const val STATUS_WAIT_MS = 2_000L
 
     data class State(
         val usage: Usage?,
@@ -46,8 +49,15 @@ object UsageRepo {
     fun refresh(context: Context): State {
         if (Settings.demo(context)) return cached(context)
         val before = cached(context)
-        val status = fetchStatus() ?: before.status
+        // Both requests at once: the status page must not hold up the numbers, and a slow one
+        // is given up on after a few seconds (the last status stays).
+        val statusTask = FutureTask { fetchStatus() }.also { Thread(it).start() }
         val result = fetchUsage(context)
+        val status = try {
+            statusTask.get(STATUS_WAIT_MS, TimeUnit.MILLISECONDS)
+        } catch (_: Exception) {
+            null
+        } ?: before.status
         val p = prefs(context).edit()
         status?.let { p.putString("status_indicator", it.indicator).putString("status_desc", it.description) }
 

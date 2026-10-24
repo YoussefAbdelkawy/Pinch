@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- The refresh arrow, turning: shown on the widget while a refresh is running. -->
-<animated-rotate xmlns:android="http://schemas.android.com/apk/res/android"
-    android:drawable="@drawable/ic_refresh"
-    android:pivotX="50%"
-    android:pivotY="50%" />

@@ -40,33 +40,38 @@ class ClawdWidget : AppWidgetProvider() {
 
         /**
          * Redraws every Clawd widget, optionally playing a one-shot animation.
-         * @param refreshing turns the refresh arrow until the next redraw.
+         * @param nudge gives the refresh arrow one quick turn (the answer to a tap on it).
          */
         fun updateAll(
             context: Context,
-            state: UsageRepo.State = UsageRepo.cached(context),
+            state: UsageRepo.State? = null,
             act: List<Frame>? = null,
             signedIn: Boolean = ClaudeAuth.isSignedIn(context),
-            refreshing: Boolean = false
-        ) {
+            nudge: Boolean = false
+        ) = synchronized(lock) {
+            // One redraw at a time, and the cached numbers read inside the lock: a redraw that
+            // waited for a refresh's redraw draws the new numbers, never the old ones over them.
+            val s = state ?: UsageRepo.cached(context)
             val manager = AppWidgetManager.getInstance(context)
-            for (id in ids(context)) render(context, manager, id, state, signedIn, act, refreshing)
+            for (id in ids(context)) render(context, manager, id, s, signedIn, act, nudge)
         }
+
+        private val lock = Any()
 
         private fun render(
             context: Context, manager: AppWidgetManager, id: Int,
-            state: UsageRepo.State, signedIn: Boolean, act: List<Frame>?, refreshing: Boolean = false
+            state: UsageRepo.State, signedIn: Boolean, act: List<Frame>?, nudge: Boolean = false
         ) {
             val o = manager.getAppWidgetOptions(id)
             // Portrait: width is the minimum, height the maximum the launcher reports.
             val w = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0).takeIf { it > 0 } ?: 300
             val h = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0).takeIf { it > 0 } ?: 200
             try {
-                manager.updateAppWidget(id, WidgetRenderer.build(context, state, signedIn, w, h, act, refreshing = refreshing))
+                manager.updateAppWidget(id, WidgetRenderer.build(context, state, signedIn, w, h, act, nudge = nudge))
             } catch (_: RuntimeException) {
                 // Too much for the launcher (bitmap budget): fall back to a still Clawd.
                 val still = (act ?: listOf(Frame())).take(1)
-                manager.updateAppWidget(id, WidgetRenderer.build(context, state, signedIn, w, h, still, refreshing = refreshing))
+                manager.updateAppWidget(id, WidgetRenderer.build(context, state, signedIn, w, h, still, nudge = nudge))
             }
         }
     }

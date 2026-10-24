@@ -93,7 +93,7 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
                 .setInputData(workDataOf(KEY_TAP to true))
                 .apply { if (Build.VERSION.SDK_INT >= 31) setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST) }
                 .build()
-            WorkManager.getInstance(context).enqueueUniqueWork(TAP, ExistingWorkPolicy.KEEP, work)
+            WorkManager.getInstance(context).enqueueUniqueWork(TAP, ExistingWorkPolicy.REPLACE, work)
         }
 
         fun cancel(context: Context) {
