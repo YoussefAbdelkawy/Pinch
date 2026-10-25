@@ -6,6 +6,10 @@
          wake lock for the background refresh. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- The tick when the widget's refresh arrow is tapped. Granted at install, no prompt. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Usage alerts. Android 13+ asks the user the first time an alert is switched on. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- WorkManager asks for these by default; Pinch needs neither (the launcher wakes it after a
          reboot anyway), and fewer permissions means fewer antivirus false alarms. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
@@ -56,6 +60,24 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_info" />
         </receiver>
+
+        <!-- The small 1x1 / 2x1 widget: percent and countdown only. Same rules as above. -->
+        <receiver
+            android:name=".widget.MiniWidget"
+            android:exported="true"
+            android:label="@string/mini_widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_mini_info" />
+        </receiver>
+
+        <!-- The "session reset" alert's alarm: private to this app. -->
+        <receiver
+            android:name=".alerts.AlertReceiver"
+            android:exported="false" />
 
         <!-- Widget buttons and the 5-minute refresh alarm: private to this app. -->
         <receiver

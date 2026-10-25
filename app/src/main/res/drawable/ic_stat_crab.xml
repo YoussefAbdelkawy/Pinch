@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Notification icon: Clawd's silhouette, eyes cut out. Android uses only its shape. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="72" android:viewportHeight="72">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M12,22h52v4h-52zM12,26h52v4h-52zM12,30h8v4h-8zM24,30h28v4h-28zM56,30h8v4h-8zM12,34h8v4h-8zM24,34h28v4h-28zM56,34h8v4h-8zM4,38h68v4h-68zM4,42h68v4h-68zM12,46h52v4h-52zM12,50h52v4h-52zM12,54h4v4h-4zM20,54h4v4h-4zM52,54h4v4h-4zM60,54h4v4h-4zM12,58h4v4h-4zM20,58h4v4h-4zM52,58h4v4h-4zM60,58h4v4h-4z" />
+</vector>

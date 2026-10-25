@@ -1,5 +1,6 @@
 package dev.pinch.app.ui
 
+import android.Manifest
 import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.ActivityNotFoundException
@@ -9,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
@@ -32,11 +34,13 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import dev.pinch.app.BuildConfig
 import dev.pinch.app.R
 import dev.pinch.app.Settings
+import dev.pinch.app.alerts.Alerts
 import dev.pinch.app.art.Clawd
 import dev.pinch.app.art.Frame
 import dev.pinch.app.art.Pix
@@ -47,6 +51,7 @@ import dev.pinch.app.art.Themes
 import dev.pinch.app.auth.ClaudeAuth
 import dev.pinch.app.data.UsageRepo
 import dev.pinch.app.widget.ClawdWidget
+import dev.pinch.app.widget.MiniWidget
 import dev.pinch.app.widget.RefreshWorker
 import dev.pinch.app.widget.WidgetRenderer
 import java.util.concurrent.Executors
@@ -171,6 +176,8 @@ class MainActivity : Activity() {
                 box.addView(button(getString(R.string.add_widget)) { pinWidget() }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
                 box.addView(text(getString(R.string.add_widget_hint), 12f, theme.muted).apply { setPadding(0, dp(6), 0, 0) })
             }
+            box.addView(button(getString(R.string.add_mini_widget), secondary = true) { pinWidget(MiniWidget::class.java) },
+                LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
         })
 
         // Theme.
@@ -213,6 +220,10 @@ class MainActivity : Activity() {
                 }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
             }
         })
+
+        // Alerts: all off until switched on.
+        col.addView(header(getString(R.string.alerts)))
+        col.addView(card { alertsSection(it) })
 
         // Footer: version, not affiliated, and the credit the crab art's license asks for.
         col.addView(text(getString(R.string.disclaimer, BuildConfig.VERSION_NAME), 12f, theme.muted).apply {
@@ -282,6 +293,92 @@ class MainActivity : Activity() {
         box.addView(button(getString(R.string.connect)) { connect(input) }.apply { filterTouchesWhenObscured = true },
             LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
         return box
+    }
+
+    private fun alertsSection(box: LinearLayout) {
+        val sessionTitle = getString(R.string.alert_session_row, Settings.sessionAlertAt(this))
+        alertRow(box, sessionTitle, getString(R.string.alert_session_sub), Settings.sessionAlert(this),
+            percent = Settings.sessionAlertAt(this) to { pct: Int -> Settings.setSessionAlertAt(this, pct); getString(R.string.alert_session_row, pct) }
+        ) { on -> Settings.setSessionAlert(this, on); if (on) askForNotifications(ALERT_SESSION) }
+        alertRow(box, getString(R.string.alert_week_row, Settings.weekAlertAt(this)), getString(R.string.alert_week_sub), Settings.weekAlert(this),
+            divider = true,
+            percent = Settings.weekAlertAt(this) to { pct: Int -> Settings.setWeekAlertAt(this, pct); getString(R.string.alert_week_row, pct) }
+        ) { on -> Settings.setWeekAlert(this, on); if (on) askForNotifications(ALERT_WEEK) }
+        alertRow(box, getString(R.string.alert_reset_row), getString(R.string.alert_reset_sub), Settings.resetAlert(this), divider = true) { on ->
+            Settings.setResetAlert(this, on)
+            Alerts.armReset(applicationContext, UsageRepo.cached(this).usage?.session)
+            if (on) askForNotifications(ALERT_RESET)
+        }
+        val anyOn = Settings.sessionAlert(this) || Settings.weekAlert(this) || Settings.resetAlert(this)
+        val hint = if (anyOn && !Alerts.allowed(this)) text(getString(R.string.alerts_blocked), 13f, Themes.WARN)
+        else text(getString(R.string.alerts_hint), 12f, theme.muted)
+        box.addView(hint.apply { setPadding(0, dp(10), 0, 0) })
+    }
+
+    /**
+     * One alert: title, caption and a pill switch, and for a percent alert a slider (50 to 95%,
+     * in steps of 5) that shows only while the switch is on.
+     */
+    private fun alertRow(
+        box: LinearLayout, title: String, sub: String, on: Boolean, divider: Boolean = false,
+        percent: Pair<Int, (Int) -> String>? = null, onToggle: (Boolean) -> Unit
+    ) {
+        if (divider) box.addView(View(this).apply { setBackgroundColor(theme.bg) }, LinearLayout.LayoutParams(-1, dp(1)).apply { topMargin = dp(10); bottomMargin = dp(10) })
+        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        val labels = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val titleView = text(title, 15f, theme.textHi)
+        labels.addView(titleView)
+        labels.addView(text(sub, 12f, theme.muted))
+        row.addView(labels, LinearLayout.LayoutParams(0, -2, 1f))
+        val pill = PillSwitch(this, theme.accent, theme.faint, theme.textHi).apply { set(on); contentDescription = title }
+        row.addView(pill)
+        box.addView(row)
+        val slider = percent?.let { (pct, changed) ->
+            SeekBar(this).apply {
+                max = (95 - 50) / 5
+                progress = (pct - 50) / 5
+                progressTintList = ColorStateList.valueOf(theme.accent)
+                thumbTintList = ColorStateList.valueOf(theme.accent)
+                progressBackgroundTintList = ColorStateList.valueOf(theme.faint)
+                visibility = if (on) View.VISIBLE else View.GONE
+                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(bar: SeekBar, p: Int, fromUser: Boolean) {
+                        if (!fromUser) return
+                        val label = changed(50 + p * 5)
+                        titleView.text = label
+                        pill.contentDescription = label
+                    }
+                    override fun onStartTrackingTouch(bar: SeekBar) {}
+                    override fun onStopTrackingTouch(bar: SeekBar) {}
+                })
+            }.also { box.addView(it, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) }) }
+        }
+        pill.onChange = { checked ->
+            slider?.visibility = if (checked) View.VISIBLE else View.GONE
+            onToggle(checked)
+        }
+    }
+
+    /** Android 13+ asks once; a "no" switches that alert back off. */
+    private fun askForNotifications(alert: Int) {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), alert)
+        } else if (!Alerts.allowed(this)) build()
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode !in intArrayOf(ALERT_SESSION, ALERT_WEEK, ALERT_RESET)) return
+        if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) return
+        when (requestCode) {
+            ALERT_SESSION -> Settings.setSessionAlert(this, false)
+            ALERT_WEEK -> Settings.setWeekAlert(this, false)
+            ALERT_RESET -> { Settings.setResetAlert(this, false); Alerts.armReset(applicationContext, null) }
+        }
+        Toast.makeText(this, R.string.alerts_blocked, Toast.LENGTH_LONG).show()
+        build()
     }
 
     private fun skinGrid(box: LinearLayout) {
@@ -385,10 +482,10 @@ class MainActivity : Activity() {
         build()
     }
 
-    private fun pinWidget() {
+    private fun pinWidget(provider: Class<*> = ClawdWidget::class.java) {
         val mgr = AppWidgetManager.getInstance(this)
         if (mgr.isRequestPinAppWidgetSupported) {
-            mgr.requestPinAppWidget(ComponentName(this, ClawdWidget::class.java), null, null)
+            mgr.requestPinAppWidget(ComponentName(this, provider), null, null)
         } else Toast.makeText(this, R.string.add_widget_manual, Toast.LENGTH_LONG).show()
     }
 
@@ -489,6 +586,13 @@ class MainActivity : Activity() {
     private fun readableOn(bg: Int): Int {
         val l = 0.299 * ((bg shr 16) and 0xFF) + 0.587 * ((bg shr 8) and 0xFF) + 0.114 * (bg and 0xFF)
         return if (l > 150) 0xFF111114.toInt() else 0xFFFFFFFF.toInt()
+    }
+
+    private companion object {
+        /** Permission request codes: which alert asked. */
+        const val ALERT_SESSION = 1
+        const val ALERT_WEEK = 2
+        const val ALERT_RESET = 3
     }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()

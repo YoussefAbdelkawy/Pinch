@@ -20,6 +20,8 @@ A small pixel crab lives on the widget. He walks around a little scene, reacts t
 
 The bars turn yellow at 60% and red at 85%.
 
+No room for the big widget? Add **Pinch mini** instead. At 1x1 it shows just the session percent and the countdown. Stretch it to 2x1 to add the bar and the crab.
+
 ## Install
 
 You need an Android phone running Android 8 or newer, and a Claude Pro or Max account.
@@ -53,7 +55,14 @@ You can change these in the app:
   - **Detective:** smokes a pipe, studies the ground with his magnifying glass, then holds it up to his eye.
 - **Refresh every.** Choose 5, 15, 30 or 60 minutes. The 5-minute option only runs while your phone is awake, so it does not drain the battery. Android may stretch it by a few minutes.
 
-To refresh right away, tap the refresh button on the widget. Tap the crab to see a trick.
+- **Alerts.** All three are off until you switch them on:
+  - **Session reaches...** tells you when your 5-hour session passes the percent you pick (50% to 95%).
+  - **Week reaches...** does the same for your weekly limit.
+  - **Session resets** tells you when your 5 hours start fresh.
+
+  Each alert goes off once per session or week. The percent alerts are checked when the widget refreshes, so they can come up to one refresh late. The reset alert comes on time. The first time you switch one on, Android asks to allow notifications.
+
+To refresh right away, tap the refresh button on the widget. The phone gives a short tick as the arrow turns (it follows your notification vibration setting). Tap the crab to see a trick.
 
 <p align="center"><img src="docs/themes.png" width="900" alt="All themes" /></p>
 
@@ -75,7 +84,7 @@ He also moves along the scene as your session fills up, so his position shows yo
 - **Pinch only talks to Anthropic.** It connects to `api.anthropic.com` for your usage, `platform.claude.com` for sign-in, and `status.claude.com` for the public status page. It has no server of its own, no ads and no tracking.
 - **Your sign-in is encrypted on your phone.** The key is stored in the Android Keystore, and the token is never logged or backed up. **Sign out** deletes it.
 - **The sign-in steps are protected.** The sign-in page opens in your own browser. The code is hidden from screenshots and other apps. The clipboard is cleared after you connect.
-- **It asks for very few permissions:** internet access and network state.
+- **It asks for very few permissions:** internet access and network state, vibration for the refresh tick, and notifications, which Android only asks you about when you switch on an alert.
 
 For details, see [SECURITY.md](SECURITY.md).
 

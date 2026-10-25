@@ -21,7 +21,10 @@ class ClawdWidget : AppWidgetProvider() {
         RefreshWorker.refreshNow(context)
     }
 
-    override fun onDisabled(context: Context) = RefreshWorker.cancel(context)
+    override fun onDisabled(context: Context) {
+        // The small widget may still be on the home screen and need the refreshes.
+        if (MiniWidget.ids(context).isEmpty()) RefreshWorker.cancel(context)
+    }
 
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
         RefreshWorker.schedule(context)
@@ -39,7 +42,7 @@ class ClawdWidget : AppWidgetProvider() {
             AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, ClawdWidget::class.java))
 
         /**
-         * Redraws every Clawd widget, optionally playing a one-shot animation.
+         * Redraws every Clawd widget (the small ones too), optionally playing a one-shot animation.
          * @param nudge gives the refresh arrow one quick turn (the answer to a tap on it).
          */
         fun updateAll(
@@ -54,6 +57,8 @@ class ClawdWidget : AppWidgetProvider() {
             val s = state ?: UsageRepo.cached(context)
             val manager = AppWidgetManager.getInstance(context)
             for (id in ids(context)) render(context, manager, id, s, signedIn, act, nudge)
+            // The small widget has no animations or arrow: it only needs new numbers and looks.
+            if (act == null && !nudge) MiniWidget.renderAll(context, s, signedIn)
         }
 
         private val lock = Any()

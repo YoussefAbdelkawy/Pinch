@@ -68,6 +68,31 @@
     <string name="battery_open">Open app info</string>
     <string name="minutes">%d min</string>
 
+    <string name="mini_widget_name">Pinch mini</string>
+    <string name="mini_widget_description">Just the session percent and its countdown. Stretch to 2x1 for the bar and the crab.</string>
+    <string name="mini_preview_pct">42%</string>
+    <string name="mini_preview_time">2:13:56</string>
+    <string name="mini_sign_in">sign in</string>
+    <string name="mini_described">Claude session %d%% used</string>
+    <string name="add_mini_widget">Add the small widget (1x1)</string>
+
+    <string name="alerts">Alerts</string>
+    <string name="alert_session_row">Session reaches %d%%</string>
+    <string name="alert_session_sub">5-hour limit</string>
+    <string name="alert_week_row">Week reaches %d%%</string>
+    <string name="alert_week_sub">Weekly limit</string>
+    <string name="alert_reset_row">Session resets</string>
+    <string name="alert_reset_sub">When your 5 hours start fresh</string>
+    <string name="alerts_hint">Checked on every refresh, so an alert can come up to one refresh interval late. A reset alert comes on time.</string>
+    <string name="alerts_blocked">Notifications are off for Pinch. Turn them on in app info to get alerts.</string>
+    <string name="alerts_channel">Usage alerts</string>
+    <string name="alert_session_title">Session at %d%%</string>
+    <string name="alert_session_text">%1$d%% left · resets in %2$s</string>
+    <string name="alert_week_title">Week at %d%%</string>
+    <string name="alert_week_text">Resets in %s</string>
+    <string name="alert_reset_title">Session reset</string>
+    <string name="alert_reset_text">Your 5-hour limit is fresh.</string>
+
     <string name="disclaimer">v%s · Not affiliated with or endorsed by Anthropic. Crab art adapted from clawd-usage-winwidget (MIT).</string>
 
     <string name="err_auth">Claude rejected the code or it expired. Tap Sign in again and use the new code.</string>

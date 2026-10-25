@@ -286,7 +286,8 @@ object WidgetRenderer {
         v.setTextColor(R.id.session_note, color)
     }
 
-    private fun bar(v: RemoteViews, name: String, pct: Int?, off: Boolean) {
+    /** Shows the level bar matching [pct] (layouts that include widget_bar_session or _week). */
+    fun bar(v: RemoteViews, name: String, pct: Int?, off: Boolean) {
         val ids = barIds(name)
         val level = if (pct == null || off) null else Level.of(pct)
         val shown = when (level) {
@@ -330,7 +331,8 @@ object WidgetRenderer {
         return p.toBitmap(4)
     }
 
-    private fun resetText(context: Context, l: Limit): String {
+    /** "3d 3h · Sun 8:44 PM": how long until [l] resets, and when. */
+    fun resetText(context: Context, l: Limit): String {
         val at = l.resetsAt ?: return context.getString(R.string.not_started)
         val ms = at - System.currentTimeMillis()
         if (ms <= 0) return context.getString(R.string.resetting)

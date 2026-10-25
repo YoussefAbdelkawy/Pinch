@@ -1,5 +1,6 @@
 package dev.pinch.app
 
+import dev.pinch.app.alerts.Alerts
 import dev.pinch.app.art.Clawd
 import dev.pinch.app.art.Frame
 import dev.pinch.app.art.Pix
@@ -11,6 +12,7 @@ import dev.pinch.app.data.Level
 import dev.pinch.app.data.Usage
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -148,5 +150,19 @@ class CoreTest {
         assertEquals(30, u.weekly!!.percent)
         assertEquals(listOf("Fable", "Opus"), u.models.map { it.label })
         assertEquals("Fable", u.topModel!!.label)
+    }
+
+    @Test fun alertsFireOncePerWindow() {
+        val hour = 3_600_000L
+        val reset = 1_000 * hour
+        // Below the threshold, or a window that has not started: nothing.
+        assertFalse(Alerts.due(79, 80, reset, 0L, hour))
+        assertFalse(Alerts.due(90, 80, null, 0L, hour))
+        // Reached it, never told: alert.
+        assertTrue(Alerts.due(80, 80, reset, 0L, hour))
+        // Already told for this window, even if the reset time wobbled a few seconds: quiet.
+        assertFalse(Alerts.due(95, 80, reset + 30_000, reset, hour))
+        // The next window (five hours on): alert again.
+        assertTrue(Alerts.due(85, 80, reset + 5 * hour, reset, hour))
     }
 }

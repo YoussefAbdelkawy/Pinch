@@ -3,6 +3,7 @@ package dev.pinch.app.data
 import android.content.Context
 import android.content.SharedPreferences
 import dev.pinch.app.Settings
+import dev.pinch.app.alerts.Alerts
 import dev.pinch.app.auth.ClaudeAuth
 import org.json.JSONObject
 import java.util.concurrent.FutureTask
@@ -67,6 +68,11 @@ object UsageRepo {
         }
         val usage = result.first!!
         p.putString("usage", usage.toJson()).remove("error").apply()
+        try {
+            Alerts.check(context, usage)
+        } catch (_: RuntimeException) {
+            // An alert that cannot go out must not cost the widget its new numbers.
+        }
 
         // Same rule as Clawd: the reset time moved forward and the percent dropped.
         val old = before.usage?.session
