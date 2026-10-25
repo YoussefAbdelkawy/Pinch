@@ -336,8 +336,10 @@ object WidgetRenderer {
         val at = l.resetsAt ?: return context.getString(R.string.not_started)
         val ms = at - System.currentTimeMillis()
         if (ms <= 0) return context.getString(R.string.resetting)
-        val h = ms / 3_600_000
-        val m = (ms % 3_600_000) / 60_000
+        // Whole minutes, rounded up: under a minute left reads "1m", never "0m".
+        val mins = (ms + 59_999) / 60_000
+        val h = mins / 60
+        val m = mins % 60
         val span = if (h >= 24) "${h / 24}d ${h % 24}h" else if (h >= 1) "${h}h ${m}m" else "${m}m"
         val time = Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault())
         val clock = time.format(DateTimeFormatter.ofPattern(if (android.text.format.DateFormat.is24HourFormat(context)) "HH:mm" else "h:mm a"))

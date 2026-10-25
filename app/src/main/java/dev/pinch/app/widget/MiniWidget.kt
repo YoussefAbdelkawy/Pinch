@@ -62,17 +62,26 @@ class MiniWidget : AppWidgetProvider() {
         }
 
         private fun render(context: Context, manager: AppWidgetManager, id: Int, state: UsageRepo.State, signedIn: Boolean) {
-            // Android 12+: hand over both layouts and let the launcher pick the one that fits.
-            val views = if (Build.VERSION.SDK_INT >= 31) {
-                RemoteViews(mapOf(
-                    SizeF(40f, 40f) to build(context, state, signedIn, wide = false),
-                    SizeF(WIDE_DP.toFloat(), 40f) to build(context, state, signedIn, wide = true)
-                ))
-            } else {
-                val w = manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
-                build(context, state, signedIn, wide = w >= WIDE_DP)
+            try {
+                // Android 12+: hand over both layouts and let the launcher pick the one that fits.
+                val views = if (Build.VERSION.SDK_INT >= 31) {
+                    RemoteViews(mapOf(
+                        SizeF(40f, 40f) to build(context, state, signedIn, wide = false),
+                        SizeF(WIDE_DP.toFloat(), 40f) to build(context, state, signedIn, wide = true)
+                    ))
+                } else {
+                    val w = manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
+                    build(context, state, signedIn, wide = w >= WIDE_DP)
+                }
+                manager.updateAppWidget(id, views)
+            } catch (_: RuntimeException) {
+                // Whatever went wrong, the number and countdown alone must still show; and the
+                // small widget must never take the app (and with it the big widget) down.
+                try {
+                    manager.updateAppWidget(id, build(context, state, signedIn, wide = false))
+                } catch (_: RuntimeException) {
+                }
             }
-            manager.updateAppWidget(id, views)
         }
 
         fun build(context: Context, state: UsageRepo.State, signedIn: Boolean, wide: Boolean): RemoteViews {

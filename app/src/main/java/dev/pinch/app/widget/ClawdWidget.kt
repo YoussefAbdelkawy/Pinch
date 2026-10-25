@@ -30,7 +30,12 @@ class ClawdWidget : AppWidgetProvider() {
         RefreshWorker.schedule(context)
         val state = UsageRepo.cached(context)
         val signedIn = ClaudeAuth.isSignedIn(context)
-        for (id in ids) render(context, manager, id, state, signedIn, null)
+        for (id in ids) {
+            try {
+                render(context, manager, id, state, signedIn, null)
+            } catch (_: RuntimeException) {
+            }
+        }
     }
 
     override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, id: Int, newOptions: Bundle) {
@@ -56,7 +61,13 @@ class ClawdWidget : AppWidgetProvider() {
             // waited for a refresh's redraw draws the new numbers, never the old ones over them.
             val s = state ?: UsageRepo.cached(context)
             val manager = AppWidgetManager.getInstance(context)
-            for (id in ids(context)) render(context, manager, id, s, signedIn, act, nudge)
+            // Each widget on its own: one that fails must not stop the others from drawing.
+            for (id in ids(context)) {
+                try {
+                    render(context, manager, id, s, signedIn, act, nudge)
+                } catch (_: RuntimeException) {
+                }
+            }
             // The small widget has no animations or arrow: it only needs new numbers and looks.
             if (act == null && !nudge) MiniWidget.renderAll(context, s, signedIn)
         }

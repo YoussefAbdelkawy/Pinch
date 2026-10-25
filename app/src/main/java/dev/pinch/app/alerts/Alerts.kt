@@ -13,7 +13,14 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import dev.pinch.app.R
+import android.graphics.Bitmap
 import dev.pinch.app.Settings
+import dev.pinch.app.art.Clawd
+import dev.pinch.app.art.Frame
+import dev.pinch.app.art.Pix
+import dev.pinch.app.art.Scenes
+import dev.pinch.app.art.Theme
+import dev.pinch.app.art.Themes
 import dev.pinch.app.data.Limit
 import dev.pinch.app.data.Usage
 import dev.pinch.app.ui.MainActivity
@@ -27,11 +34,17 @@ import kotlin.math.abs
  */
 object Alerts {
 
-    private const val CHANNEL = "alerts"
+    private const val CHANNEL_USAGE = "alerts"
+    private const val CHANNEL_RESET = "alerts_reset"
     private const val ID_SESSION = 1
     private const val ID_WEEK = 2
     private const val ID_RESET = 3
+    private const val KEY_SESSION = "session"
+    private const val KEY_WEEK = "week"
+    private const val KEY_RESET = "reset"
     const val EXTRA_RESETS_AT = "resets_at"
+    const val EXTRA_KEY = "key"
+    const val ACTION_TURN_OFF = "dev.pinch.app.action.ALERT_OFF"
 
     /** Reset times of one window can wobble between fetches; windows are hours apart. */
     private const val SESSION_SLACK_MS = 60 * 60_000L
@@ -52,8 +65,13 @@ object Alerts {
             val at = Settings.sessionAlertAt(app)
             if (due(session.percent, at, session.resetsAt, Settings.alertFired(app, "session"), SESSION_SLACK_MS)) {
                 Settings.setAlertFired(app, "session", session.resetsAt!!)
-                post(app, ID_SESSION, app.getString(R.string.alert_session_title, session.percent),
-                    app.getString(R.string.alert_session_text, (100 - session.percent).coerceAtLeast(0), WidgetRenderer.resetText(app, session)))
+                post(
+                    app, ID_SESSION, CHANNEL_USAGE,
+                    title = app.getString(R.string.alert_session_title, session.percent),
+                    text = app.getString(R.string.alert_session_text, (100 - session.percent).coerceAtLeast(0), WidgetRenderer.resetText(app, session)),
+                    sub = app.getString(R.string.session_5h),
+                    percent = session.percent, until = session.resetsAt, off = KEY_SESSION
+                )
             }
         }
         val week = usage.weekly
@@ -61,8 +79,13 @@ object Alerts {
             val at = Settings.weekAlertAt(app)
             if (due(week.percent, at, week.resetsAt, Settings.alertFired(app, "week"), WEEK_SLACK_MS)) {
                 Settings.setAlertFired(app, "week", week.resetsAt!!)
-                post(app, ID_WEEK, app.getString(R.string.alert_week_title, week.percent),
-                    app.getString(R.string.alert_week_text, WidgetRenderer.resetText(app, week)))
+                post(
+                    app, ID_WEEK, CHANNEL_USAGE,
+                    title = app.getString(R.string.alert_week_title, week.percent),
+                    text = app.getString(R.string.alert_week_text, WidgetRenderer.resetText(app, week)),
+                    sub = app.getString(R.string.alert_week_sub),
+                    percent = week.percent, until = week.resetsAt, off = KEY_WEEK
+                )
             }
         }
         armReset(app, session)
@@ -89,7 +112,24 @@ object Alerts {
         if (!Settings.resetAlert(context)) return
         if (resetsAt != 0L && abs(Settings.alertFired(context, "reset") - resetsAt) < SESSION_SLACK_MS) return
         Settings.setAlertFired(context, "reset", resetsAt)
-        post(context, ID_RESET, context.getString(R.string.alert_reset_title), context.getString(R.string.alert_reset_text))
+        // The "session at N%" alert is old news now.
+        NotificationManagerCompat.from(context).cancel(ID_SESSION)
+        post(
+            context, ID_RESET, CHANNEL_RESET,
+            title = context.getString(R.string.alert_reset_title),
+            text = context.getString(R.string.alert_reset_text),
+            sub = context.getString(R.string.session_5h),
+            percent = 0, until = null, off = KEY_RESET, happy = true
+        )
+    }
+
+    /** The "Turn off" button on an alert: switches that alert off, as the app's switch would. */
+    fun turnOff(context: Context, key: String) {
+        when (key) {
+            KEY_SESSION -> { Settings.setSessionAlert(context, false); NotificationManagerCompat.from(context).cancel(ID_SESSION) }
+            KEY_WEEK -> { Settings.setWeekAlert(context, false); NotificationManagerCompat.from(context).cancel(ID_WEEK) }
+            KEY_RESET -> { Settings.setResetAlert(context, false); armReset(context, null); NotificationManagerCompat.from(context).cancel(ID_RESET) }
+        }
     }
 
     /** Whether Android will show Pinch's notifications at all. */
@@ -100,26 +140,72 @@ object Alerts {
         return NotificationManagerCompat.from(context).areNotificationsEnabled()
     }
 
-    private fun post(context: Context, id: Int, title: String, text: String) {
+    /**
+     * One alert, in the app's look: Clawd in today's skin, the level colour, and two buttons.
+     * It pings once, and clears itself at [until] (the reset), when it stops being true.
+     */
+    private fun post(
+        context: Context, id: Int, channel: String, title: String, text: String, sub: String,
+        percent: Int, until: Long?, off: String, happy: Boolean = false
+    ) {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
-        val nm = context.getSystemService(NotificationManager::class.java) ?: return
-        nm.createNotificationChannel(
-            NotificationChannel(CHANNEL, context.getString(R.string.alerts_channel), NotificationManager.IMPORTANCE_DEFAULT)
-        )
+        channels(context)
+        val theme = Settings.theme(context)
         val open = PendingIntent.getActivity(
             context, 0, Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val n = NotificationCompat.Builder(context, CHANNEL)
+        val turnOff = PendingIntent.getBroadcast(
+            context, id,
+            Intent(context, AlertReceiver::class.java).setAction(ACTION_TURN_OFF).putExtra(EXTRA_KEY, off),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val b = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_stat_crab)
+            .setLargeIcon(portrait(context, theme, happy))
+            .setColor(if (happy) Themes.OK else WidgetRenderer.levelColor(percent))
             .setContentTitle(title)
             .setContentText(text)
+            .setSubText(sub)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setOnlyAlertOnce(true)
+            .setShowWhen(true)
             .setContentIntent(open)
             .setAutoCancel(true)
-            .build()
-        NotificationManagerCompat.from(context).notify(id, n)
+            .addAction(0, context.getString(R.string.alert_open), open)
+            .addAction(0, context.getString(R.string.alert_turn_off), turnOff)
+        // A one-off ping, not a live notification: no progress bar (it reads as a running task),
+        // and it clears itself at the reset if it was not swiped away before.
+        val left = (until ?: 0L) - System.currentTimeMillis()
+        if (left > 0) b.setTimeoutAfter(left)
+        NotificationManagerCompat.from(context).notify(id, b.build())
+    }
+
+    /** Two channels, so the phone's settings can silence limits and resets separately. */
+    private fun channels(context: Context) {
+        val nm = context.getSystemService(NotificationManager::class.java) ?: return
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL_USAGE, context.getString(R.string.alerts_channel), NotificationManager.IMPORTANCE_DEFAULT)
+                .apply { description = context.getString(R.string.alerts_channel_desc) }
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(CHANNEL_RESET, context.getString(R.string.alerts_channel_reset), NotificationManager.IMPORTANCE_DEFAULT)
+                .apply { description = context.getString(R.string.alerts_channel_reset_desc) }
+        )
+    }
+
+    /** Clawd in the skin he wears today, on the theme's card colour; arms up for a reset. */
+    private fun portrait(context: Context, theme: Theme, happy: Boolean): Bitmap {
+        // A square cut tight around him (the canvas is wide for his walks), so he fills the icon.
+        val size = 24
+        val p = Pix(size, size)
+        p.rect(0, 0, size, size, theme.card)
+        val frame = if (happy) Frame(eyes = "happy", arms = "up") else Frame()
+        Clawd.draw(p, frame, Settings.skin(context, theme), Clawd.ORIGIN_X - 6, Clawd.ORIGIN_Y + 3, Scenes.sand(theme.scene))
+        return p.toBitmap(4)
     }
 
     private fun resetPending(context: Context, resetsAt: Long): PendingIntent = PendingIntent.getBroadcast(

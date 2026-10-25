@@ -86,12 +86,17 @@
     <string name="alerts_hint">Checked on every refresh, so an alert can come up to one refresh interval late. A reset alert comes on time.</string>
     <string name="alerts_blocked">Notifications are off for Pinch. Turn them on in app info to get alerts.</string>
     <string name="alerts_channel">Usage alerts</string>
+    <string name="alerts_channel_desc">When your session or week passes the percent you picked</string>
+    <string name="alerts_channel_reset">Reset alerts</string>
+    <string name="alerts_channel_reset_desc">When your 5-hour session starts fresh</string>
+    <string name="alert_open">Open Pinch</string>
+    <string name="alert_turn_off">Turn off</string>
     <string name="alert_session_title">Session at %d%%</string>
     <string name="alert_session_text">%1$d%% left · resets in %2$s</string>
     <string name="alert_week_title">Week at %d%%</string>
     <string name="alert_week_text">Resets in %s</string>
     <string name="alert_reset_title">Session reset</string>
-    <string name="alert_reset_text">Your 5-hour limit is fresh.</string>
+    <string name="alert_reset_text">Your 5-hour limit is fresh. 0% used, the crab is ready.</string>
 
     <string name="disclaimer">v%s · Not affiliated with or endorsed by Anthropic. Crab art adapted from clawd-usage-winwidget (MIT).</string>
 
