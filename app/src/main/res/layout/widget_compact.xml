@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pinch widget at small and narrow sizes (1x1 up to about 2 cells wide). The same view ids as
+     widget.xml, so one piece of code fills every size. Rows are hidden from code as space runs out;
+     the percent and the reset time always stay. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipToOutline="true">
+
+    <ImageView
+        android:id="@+id/bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/bg_widget" />
+
+    <ImageView
+        android:id="@+id/pattern"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:padding="6dp"
+        android:scaleType="fitXY" />
+
+    <LinearLayout
+        android:id="@+id/content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingStart="12dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="8dp">
+
+        <LinearLayout
+            android:id="@+id/header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.08"
+                android:singleLine="true"
+                android:text="@string/widget_title_short"
+                android:textColor="#FFB4B4BC"
+                android:textSize="11sp" />
+
+            <ImageView
+                android:id="@+id/refresh"
+                android:layout_width="26dp"
+                android:layout_height="22dp"
+                android:contentDescription="@string/refresh"
+                android:paddingStart="6dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
+                android:src="@drawable/ic_refresh" />
+
+            <ProgressBar
+                android:id="@+id/refresh_nudge"
+                android:layout_width="26dp"
+                android:layout_height="22dp"
+                android:indeterminate="true"
+                android:indeterminateDrawable="@drawable/refresh_nudge"
+                android:indeterminateTint="#FF8B8B94"
+                android:paddingStart="7dp"
+                android:paddingTop="2dp"
+                android:paddingEnd="1dp"
+                android:paddingBottom="2dp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/pct"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:includeFontPadding="false"
+            android:singleLine="true"
+            android:text="@string/dash_pct"
+            android:textColor="#FFF4F4F5"
+            android:textSize="28sp" />
+
+        <TextView
+            android:id="@+id/left_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:textColor="#FF8B8B94"
+            android:textSize="10sp" />
+
+        <ViewFlipper
+            android:id="@+id/hearts"
+            android:layout_width="46dp"
+            android:layout_height="12dp"
+            android:layout_marginTop="3dp"
+            android:autoStart="true"
+            android:flipInterval="160" />
+
+        <include layout="@layout/widget_bar_session" />
+
+        <LinearLayout
+            android:id="@+id/session_row"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:orientation="horizontal">
+
+            <Chronometer
+                android:id="@+id/session_reset"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:singleLine="true"
+                android:textColor="#FFE4E4E7"
+                android:textSize="11sp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/session_note"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:singleLine="true"
+                android:text="@string/loading"
+                android:textColor="#FFE4E4E7"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/week_row"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="bottom"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/week_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:letterSpacing="0.08"
+                android:text="@string/week"
+                android:textColor="#FFB4B4BC"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/week_pct"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingStart="5dp"
+                android:singleLine="true"
+                android:textColor="#FFF4F4F5"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <include layout="@layout/widget_bar_week" />
+
+        <TextView
+            android:id="@+id/week_reset"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="#FF8B8B94"
+            android:textSize="10sp" />
+    </LinearLayout>
+</FrameLayout>
