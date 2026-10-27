@@ -26,10 +26,26 @@ data class Usage(
     /** The per-model limit that is furthest along: "the model you use most" this week. */
     val topModel: Limit? get() = models.maxByOrNull { it.percent }
 
-    /** Clawd's health: three hearts with halves, ~16.7% of the session left per half. */
+    /** The week is used up: no session can be used until it resets, whatever the session says. */
+    val weekMaxed: Boolean get() = (weekly?.percent ?: 0) >= 100
+
+    /** Clawd's health: three hearts with halves, ~16.7% of what is left per half. A full week empties them. */
     val heartHalves: Int? get() = session?.let {
-        ceil((100 - it.percent).coerceAtLeast(0) * 6 / 100.0).toInt().coerceIn(0, 6)
+        if (weekMaxed) 0 else ceil((100 - it.percent).coerceAtLeast(0) * 6 / 100.0).toInt().coerceIn(0, 6)
     }
+
+    /**
+     * The numbers as they stand at [now]. A window whose reset time has passed is back at 0%
+     * and not running, even before the next fetch confirms it, so the widget never shows a
+     * used-up session hours after it reset (a phone in Doze may not fetch for a while).
+     */
+    fun settled(now: Long = System.currentTimeMillis()): Usage {
+        fun Limit.s() = if (resetsAt != null && resetsAt <= now) copy(percent = 0, resetsAt = null) else this
+        return copy(session = session?.s(), weekly = weekly?.s(), models = models.map { it.s() })
+    }
+
+    /** The next moment a window resets, or null. */
+    val nextReset: Long? get() = listOfNotNull(session?.resetsAt, weekly?.resetsAt).minOrNull()
 
     fun toJson(): String = JSONObject()
         .put("session", session?.let(::limitJson))

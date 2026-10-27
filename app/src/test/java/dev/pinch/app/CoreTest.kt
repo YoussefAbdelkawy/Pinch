@@ -7,8 +7,11 @@ import dev.pinch.app.art.Scenes
 import dev.pinch.app.art.Skins
 import dev.pinch.app.art.Stage
 import dev.pinch.app.art.Themes
+import dev.pinch.app.data.History
 import dev.pinch.app.data.Level
+import dev.pinch.app.data.Limit
 import dev.pinch.app.data.Usage
+import dev.pinch.app.data.UsageRepo
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -55,6 +58,43 @@ class CoreTest {
         assertNull(u.weekly!!.resetsAt)
         assertEquals("Max 20x", u.plan)
         assertTrue(u.models.isEmpty())
+    }
+
+    @Test fun passedResetsSettleToZero() {
+        val u = Usage(
+            session = Limit("Session", 87, 1_000L),
+            weekly = Limit("Week", 40, 9_000L),
+            models = emptyList(), plan = "Pro", fetchedAt = 0
+        )
+        val s = u.settled(now = 2_000L)
+        assertEquals(0, s.session!!.percent)
+        assertNull(s.session!!.resetsAt)
+        assertEquals(40, s.weekly!!.percent) // the week has not reset yet
+        assertEquals(9_000L, s.nextReset)
+        assertEquals(1_000L, u.nextReset)
+    }
+
+    @Test fun maxedWeekEmptiesTheHearts() {
+        val u = Usage(Limit("Session", 4, 5_000L), Limit("Week", 100, 9_000L), emptyList(), "Pro", 0)
+        assertTrue(u.weekMaxed)
+        assertEquals(0, u.heartHalves)
+        val state = UsageRepo.State(u, null, null)
+        assertEquals(Clawd.Mood.DEAD, dev.pinch.app.widget.WidgetRenderer.moodOf(state, signedIn = true))
+    }
+
+    @Test fun historyGroupsWindows() {
+        val h = 3_600_000L
+        val pts = listOf(
+            History.Point(0, 10, 5, 5 * h, 100 * h),
+            History.Point(h, 60, 9, 5 * h, 100 * h),
+            History.Point(2 * h, 40, 9, 5 * h + 2_000, 100 * h), // same window, reset time a second off
+            History.Point(6 * h, 20, 12, 11 * h, 100 * h)
+        )
+        val sessions = History.sessions(pts)
+        assertEquals(2, sessions.size)
+        assertEquals(60, sessions[0].peak)
+        assertEquals(20, sessions[1].peak)
+        assertEquals(listOf(12), History.weeks(pts).map { it.peak })
     }
 
     @Test fun levels() {

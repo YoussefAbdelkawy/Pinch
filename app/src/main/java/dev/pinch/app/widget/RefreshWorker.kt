@@ -33,8 +33,9 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         // Keeps a 5-minute alarm alive, e.g. after a reboot (alarms do not survive one).
         if (Settings.intervalMinutes(ctx) < 15) FastRefresh.arm(ctx)
         val state = UsageRepo.refresh(ctx)
+        FastRefresh.armReset(ctx, state.usage?.nextReset)
         if (state.justReset) {
-            // The 5-hour window reset: Clawd jumps for joy with confetti, then settles.
+            // A window reset: Clawd jumps for joy with confetti, then settles.
             val party = Clawd.celebrate()
             ClawdWidget.updateAll(ctx, state, party)
             delay(party.size * Clawd.FRAME_MS + 300)
@@ -58,6 +59,7 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
 
         fun schedule(context: Context, replace: Boolean = false) {
             FastRefresh.arm(context)
+            FastRefresh.armReset(context, UsageRepo.cached(context).usage?.nextReset)
             val minutes = Settings.intervalMinutes(context).toLong().coerceAtLeast(15)
             val work = PeriodicWorkRequestBuilder<RefreshWorker>(minutes, TimeUnit.MINUTES)
                 .setConstraints(network)
@@ -73,10 +75,12 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         /**
          * A background refresh (the 5-minute alarm, a new widget). KEEP, not REPLACE: replacing
          * cancelled a refresh that was already halfway through its network call.
+         * @param delayMs waits this long first (right after a reset, Anthropic needs a moment).
          */
-        fun refreshNow(context: Context) {
+        fun refreshNow(context: Context, delayMs: Long = 0) {
             val work = OneTimeWorkRequestBuilder<RefreshWorker>()
                 .setConstraints(network)
+                .setInitialDelay(delayMs, TimeUnit.MILLISECONDS)
                 .build()
             WorkManager.getInstance(context).enqueueUniqueWork(NOW, ExistingWorkPolicy.KEEP, work)
         }
