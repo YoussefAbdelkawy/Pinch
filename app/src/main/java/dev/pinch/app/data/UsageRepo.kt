@@ -30,7 +30,11 @@ object UsageRepo {
 
     data class ServiceStatus(val indicator: String, val description: String)
 
-    fun cached(context: Context): State {
+    /** The last numbers, settled to now: a window whose reset time has passed shows as reset. */
+    fun cached(context: Context): State = raw(context).let { it.copy(usage = it.usage?.settled()) }
+
+    /** The last numbers exactly as fetched. */
+    private fun raw(context: Context): State {
         val p = prefs(context)
         val usage = p.getString("usage", null)?.let { Usage.fromCache(it) }
         val status = p.getString("status_indicator", null)?.let {
@@ -48,7 +52,7 @@ object UsageRepo {
     @Synchronized
     fun refresh(context: Context): State {
         if (Settings.demo(context)) return cached(context)
-        val before = cached(context)
+        val before = raw(context)
         // Both requests at once: the status page must not hold up the numbers, and a slow one
         // is given up on after a few seconds (the last status stays).
         val statusTask = FutureTask { fetchStatus() }.also { Thread(it).start() }
@@ -63,17 +67,18 @@ object UsageRepo {
 
         if (result.second != null) {
             p.putString("error", result.second).apply()
-            return before.copy(error = result.second, status = status)
+            return before.copy(usage = before.usage?.settled(), error = result.second, status = status)
         }
         val usage = result.first!!
         p.putString("usage", usage.toJson()).remove("error").apply()
+        History.record(context, usage)
 
-        // Same rule as Clawd: the reset time moved forward and the percent dropped.
-        val old = before.usage?.session
-        val new = usage.session
-        val reset = old?.resetsAt != null && new != null &&
+        // Same rule as Clawd: the reset time moved forward and the percent dropped. The week
+        // resetting counts too: after a maxed-out week that is the bigger relief.
+        fun reset(old: Limit?, new: Limit?) = old?.resetsAt != null && new != null &&
             (new.resetsAt == null || new.resetsAt > old.resetsAt) && new.percent < old.percent
-        return State(usage, null, status, justReset = reset)
+        val justReset = reset(before.usage?.session, usage.session) || reset(before.usage?.weekly, usage.weekly)
+        return State(usage.settled(), null, status, justReset = justReset)
     }
 
     fun clear(context: Context) = prefs(context).edit().clear().commit()

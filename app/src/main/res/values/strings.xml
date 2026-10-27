@@ -13,6 +13,19 @@
     <string name="pct_left">%1$d%% left</string>
     <string name="session_5h">5-hour session</string>
     <string name="week">WEEK</string>
+    <string name="widget_title_short">CLAUDE</string>
+    <string name="week_used_up">week used up</string>
+    <string name="week_full">Weekly limit reached · back %s</string>
+    <string name="week_full_short">back %s</string>
+    <string name="resets_in_chrono_short">↻ %s</string>
+    <string name="not_started_short">not started</string>
+    <string name="tap_to_sign_in_short">Sign in</string>
+    <string name="sign_in_again_short">Sign in again</string>
+    <string name="api_changed_short">Update app</string>
+    <string name="offline_short">offline</string>
+    <string name="say_session">Claude session %d percent used</string>
+    <string name="say_resets">resets at %s</string>
+    <string name="say_week">week %d percent used</string>
     <string name="top_model">TOP MODEL</string>
     <string name="resets_in_chrono">resets in %s</string>
     <string name="resets_span">%1$s · %2$s</string>
@@ -51,7 +64,7 @@
 
     <string name="widget">Widget</string>
     <string name="add_widget">Add the widget to the home screen</string>
-    <string name="add_widget_hint">Or long-press your home screen → Widgets → Pinch. Resize it: smaller sizes hide the extra rows.</string>
+    <string name="add_widget_hint">Or long-press your home screen → Widgets → Pinch.</string>
     <string name="add_another_widget">Add another widget</string>
     <plurals name="widget_placed">
         <item quantity="one">✓ The widget is on your home screen</item>
@@ -68,6 +81,27 @@
     <string name="battery_open">Open app info</string>
     <string name="minutes">%d min</string>
 
+    <string name="now">Now</string>
+    <string name="used">used</string>
+    <string name="week_long">This week</string>
+    <string name="week_blocked">Weekly limit reached. Claude is paused until %s.</string>
+    <string name="no_window">No session running. It starts with your next message.</string>
+    <string name="resets_in_at">Resets in %1$s · at %2$s</string>
+    <string name="updated_at">Updated %s</string>
+    <string name="history">History</string>
+    <string name="history_day">24 hours</string>
+    <string name="history_sessions">Sessions</string>
+    <string name="history_weeks">Weeks</string>
+    <string name="history_empty">Your history starts now. Pinch saves a point every time it refreshes, so the chart fills in over the next few hours.</string>
+    <string name="history_private">Kept on this phone only, for 35 days. Touch the chart to read a value.</string>
+    <string name="history_day_caption">Highest in the last 24 hours: %d%%</string>
+    <plurals name="history_sessions_caption">
+        <item quantity="one">%1$d session in 7 days · average peak %2$d%% · hit the limit %3$d times</item>
+        <item quantity="other">%1$d sessions in 7 days · average peak %2$d%% · hit the limit %3$d times</item>
+    </plurals>
+    <string name="history_weeks_caption">Average week %1$d%% · busiest %2$d%%</string>
+    <string name="any_size_hint">One widget for every size. Resize it on the home screen from 1×1 up: it always shows the percent and when it resets, and the crab joins in from 3 cells wide.</string>
+    <string name="refresh_reset_note">Pinch also wakes up right after each reset, so the widget never sits on an old number.</string>
     <string name="disclaimer">v%s · Not affiliated with or endorsed by Anthropic. Crab art adapted from clawd-usage-winwidget (MIT).</string>
 
     <string name="err_auth">Claude rejected the code or it expired. Tap Sign in again and use the new code.</string>
