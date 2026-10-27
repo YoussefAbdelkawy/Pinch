@@ -21,6 +21,7 @@ import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -149,7 +150,12 @@ class MainActivity : Activity() {
             contentDescription = getString(R.string.refresh_now)
             setPadding(dp(10), dp(10), dp(10), dp(10))
             background = rounded(theme.card, 20)
-            setOnClickListener { refreshNow() }
+            // A plain image does not tick under the finger the way a button does: give it the
+            // same feel (it follows the system's touch-vibration setting).
+            setOnClickListener {
+                it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                refreshNow()
+            }
         }, LinearLayout.LayoutParams(dp(40), dp(40)))
         col.addView(top, LinearLayout.LayoutParams(-1, dp(48)))
 
