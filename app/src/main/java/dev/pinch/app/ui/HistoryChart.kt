@@ -27,13 +27,13 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * The app's usage history chart. Three views of the same points:
- * the session over the last day (a line), each 5-hour window of the last week (bars), and
- * each week (bars). Touch and drag to read a value.
+ * The app's usage history chart. Two views of the same points: the session over the last day
+ * (a line) and each 5-hour window of the last week (bars). Time runs towards the reading
+ * direction, so on a right-to-left phone now is on the left. Touch and drag to read a value.
  */
 class HistoryChart(context: Context) : View(context) {
 
-    enum class Mode { DAY, SESSIONS, WEEKS }
+    enum class Mode { DAY, SESSIONS }
 
     /** A bar or a line point: x is a time, y a percent. */
     private class Item(val t: Long, val pct: Int)
@@ -78,12 +78,6 @@ class HistoryChart(context: Context) : View(context) {
                 to = now + History.SESSION_MS
                 items = History.sessions(points).filter { it.endsAt > from }.map { Item(it.endsAt, it.peak) }
             }
-            Mode.WEEKS -> {
-                val weeks = History.weeks(points).takeLast(6)
-                items = weeks.map { Item(it.endsAt, it.peak) }
-                from = (weeks.firstOrNull()?.endsAt ?: now) - 7 * 24 * 3_600_000L
-                to = weeks.lastOrNull()?.endsAt ?: now
-            }
         }
         contentDescription = summary()
         invalidate()
@@ -105,9 +99,14 @@ class HistoryChart(context: Context) : View(context) {
         setMeasuredDimension(w, (180 * d).toInt())
     }
 
+    private val rtl get() = layoutDirection == LAYOUT_DIRECTION_RTL
+
+    /** Mirrors a left-to-right x for a right-to-left phone: the percent labels move to the left too. */
+    private fun flip(xx: Float): Float = if (rtl) width - xx else xx
+
     private fun x(t: Long): Float {
         val span = (to - from).coerceAtLeast(1)
-        return padL + (width - padL - padR) * ((t - from).toFloat() / span)
+        return flip(padL + (width - padL - padR) * ((t - from).toFloat() / span))
     }
 
     private fun y(pct: Int): Float = padT + (height - padT - padB) * (1f - pct.coerceIn(0, 100) / 100f)
@@ -117,16 +116,17 @@ class HistoryChart(context: Context) : View(context) {
         grid.color = Pix.withAlpha(theme.muted, 0.35f)
         label.color = theme.muted
         // Grid at 0, 50 and 100 percent, labelled on the right.
+        label.textAlign = if (rtl) Paint.Align.RIGHT else Paint.Align.LEFT
         for (p in intArrayOf(0, 50, 100)) {
             val yy = y(p)
-            c.drawLine(padL, yy, width - padR + 4 * d, yy, grid)
-            c.drawText("$p%", width - padR + 8 * d, yy + label.textSize / 3, label)
+            c.drawLine(flip(padL), yy, flip(width - padR + 4 * d), yy, grid)
+            c.drawText("$p%", flip(width - padR + 8 * d), yy + label.textSize / 3, label)
         }
         if (items.isEmpty()) return
 
         when (mode) {
             Mode.DAY -> drawLine(c, accent)
-            Mode.SESSIONS, Mode.WEEKS -> drawBars(c)
+            Mode.SESSIONS -> drawBars(c)
         }
         drawAxis(c)
         touched?.let { drawTip(c, it) }
@@ -163,20 +163,10 @@ class HistoryChart(context: Context) : View(context) {
         c.drawCircle(lastX, lastY, 1.8f * d, bar)
     }
 
-    private fun barWidth(): Float = when (mode) {
-        // A 5-hour window is 5/168 of the week; leave a little air between neighbours.
-        Mode.SESSIONS -> max(3 * d, (width - padL - padR) * (History.SESSION_MS.toFloat() / (to - from)) * 0.8f)
-        else -> min(36 * d, (width - padL - padR) / max(items.size, 4) * 0.6f)
-    }
+    // A 5-hour window is 5/168 of the week; leave a little air between neighbours.
+    private fun barWidth(): Float = max(3 * d, (width - padL - padR) * (History.SESSION_MS.toFloat() / (to - from)) * 0.8f)
 
-    private fun barX(i: Int): Float = when (mode) {
-        Mode.SESSIONS -> x(items[i].t - History.SESSION_MS / 2)
-        else -> {
-            val slots = max(items.size, 4)
-            val slotW = (width - padL - padR) / slots
-            padL + slotW * (i + slots - items.size) + slotW / 2
-        }
-    }
+    private fun barX(i: Int): Float = x(items[i].t - History.SESSION_MS / 2)
 
     private fun drawBars(c: Canvas) {
         val w = barWidth()
@@ -217,9 +207,6 @@ class HistoryChart(context: Context) : View(context) {
                     day = day.plusDays(1)
                 }
             }
-            Mode.WEEKS -> items.forEachIndexed { i, it ->
-                c.drawText(DateTimeFormatter.ofPattern("MMM d").format(Instant.ofEpochMilli(it.t).atZone(zone)), barX(i), yy, label)
-            }
         }
         label.textAlign = Paint.Align.LEFT
     }
@@ -232,11 +219,9 @@ class HistoryChart(context: Context) : View(context) {
 
     private fun drawTip(c: Canvas, i: Int) {
         val it = items[i]
-        val zone = ZoneId.systemDefault()
         val (xx, text) = when (mode) {
             Mode.DAY -> x(it.t) to "${it.pct}% · ${WidgetRenderer.whenText(context, it.t)}"
             Mode.SESSIONS -> barX(i) to "${it.pct}% peak · ended ${WidgetRenderer.whenText(context, it.t)}"
-            Mode.WEEKS -> barX(i) to "${it.pct}% · week to ${DateTimeFormatter.ofPattern("MMM d").format(Instant.ofEpochMilli(it.t).atZone(zone))}"
         }
         grid.color = Pix.withAlpha(theme.text, 0.6f)
         c.drawLine(xx, padT - 4 * d, xx, y(0), grid)
@@ -246,7 +231,7 @@ class HistoryChart(context: Context) : View(context) {
         }
         tip.color = theme.textHi
         val tw = tip.measureText(text)
-        val tx = (xx - tw / 2).coerceIn(padL, width - tw - 2 * d)
+        val tx = (xx - tw / 2).coerceIn(6 * d, width - tw - 6 * d)
         bar.color = theme.bg
         rect.set(tx - 6 * d, 2 * d, tx + tw + 6 * d, padT - 6 * d)
         c.drawRoundRect(rect, 6 * d, 6 * d, bar)

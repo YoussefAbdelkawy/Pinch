@@ -6,6 +6,8 @@
          wake lock for the background refresh. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- The tap under the finger on the app's refresh button. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
     <!-- WorkManager asks for these by default; Pinch needs neither (the launcher wakes it after a
          reboot anyway), and fewer permissions means fewer antivirus false alarms. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
