@@ -17,11 +17,12 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
 import android.view.Gravity
-import android.view.HapticFeedbackConstants
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
@@ -150,10 +151,8 @@ class MainActivity : Activity() {
             contentDescription = getString(R.string.refresh_now)
             setPadding(dp(10), dp(10), dp(10), dp(10))
             background = rounded(theme.card, 20)
-            // A plain image does not tick under the finger the way a button does: give it the
-            // same feel (it follows the system's touch-vibration setting).
             setOnClickListener {
-                it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                tick()
                 refreshNow()
             }
         }, LinearLayout.LayoutParams(dp(40), dp(40)))
@@ -385,8 +384,7 @@ class MainActivity : Activity() {
         }
         val modes = listOf(
             HistoryChart.Mode.DAY to R.string.history_day,
-            HistoryChart.Mode.SESSIONS to R.string.history_sessions,
-            HistoryChart.Mode.WEEKS to R.string.history_weeks
+            HistoryChart.Mode.SESSIONS to R.string.history_sessions
         )
         val tabViews = mutableListOf<TextView>()
         fun select(mode: HistoryChart.Mode) {
@@ -424,7 +422,6 @@ class MainActivity : Activity() {
         return when (mode) {
             HistoryChart.Mode.DAY -> getString(R.string.history_day_caption, peak)
             HistoryChart.Mode.SESSIONS -> resources.getQuantityString(R.plurals.history_sessions_caption, chart.count(), chart.count(), avg, chart.maxedCount())
-            HistoryChart.Mode.WEEKS -> getString(R.string.history_weeks_caption, avg, peak)
         }
     }
 
@@ -598,6 +595,16 @@ class MainActivity : Activity() {
                 } else say(errorText(err), Themes.CRIT)
             }
         }
+    }
+
+    /**
+     * A short tap under the finger. View haptics stay silent while the system's touch feedback
+     * is off (the default on many phones), so this asks the vibrator directly.
+     */
+    private fun tick() {
+        val vibrator = getSystemService(Vibrator::class.java)?.takeIf { it.hasVibrator() } ?: return
+        if (Build.VERSION.SDK_INT >= 29) vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
+        else vibrator.vibrate(VibrationEffect.createOneShot(20, VibrationEffect.DEFAULT_AMPLITUDE))
     }
 
     private fun refreshNow() {

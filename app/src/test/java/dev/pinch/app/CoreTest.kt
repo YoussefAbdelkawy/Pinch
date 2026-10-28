@@ -94,7 +94,6 @@ class CoreTest {
         assertEquals(2, sessions.size)
         assertEquals(60, sessions[0].peak)
         assertEquals(20, sessions[1].peak)
-        assertEquals(listOf(12), History.weeks(pts).map { it.peak })
     }
 
     @Test fun levels() {
