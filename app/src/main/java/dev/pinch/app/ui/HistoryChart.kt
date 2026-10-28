@@ -28,8 +28,8 @@ import kotlin.math.roundToInt
 
 /**
  * The app's usage history chart. Two views of the same points: the session over the last day
- * (a line) and each 5-hour window of the last week (bars). Time runs towards the reading
- * direction, so on a right-to-left phone now is on the left. Touch and drag to read a value.
+ * (a line) and each 5-hour window of the last week (bars). Time runs right to left: now is on
+ * the left edge and the past stretches away to the right. Touch and drag to read a value.
  */
 class HistoryChart(context: Context) : View(context) {
 
@@ -99,10 +99,8 @@ class HistoryChart(context: Context) : View(context) {
         setMeasuredDimension(w, (180 * d).toInt())
     }
 
-    private val rtl get() = layoutDirection == LAYOUT_DIRECTION_RTL
-
-    /** Mirrors a left-to-right x for a right-to-left phone: the percent labels move to the left too. */
-    private fun flip(xx: Float): Float = if (rtl) width - xx else xx
+    /** Mirrors a left-to-right x so time runs right to left: the percent labels move to the left too. */
+    private fun flip(xx: Float): Float = width - xx
 
     private fun x(t: Long): Float {
         val span = (to - from).coerceAtLeast(1)
@@ -115,8 +113,8 @@ class HistoryChart(context: Context) : View(context) {
         val accent = theme.accent
         grid.color = Pix.withAlpha(theme.muted, 0.35f)
         label.color = theme.muted
-        // Grid at 0, 50 and 100 percent, labelled on the right.
-        label.textAlign = if (rtl) Paint.Align.RIGHT else Paint.Align.LEFT
+        // Grid at 0, 50 and 100 percent, labelled on the left.
+        label.textAlign = Paint.Align.RIGHT
         for (p in intArrayOf(0, 50, 100)) {
             val yy = y(p)
             c.drawLine(flip(padL), yy, flip(width - padR + 4 * d), yy, grid)
