@@ -91,7 +91,6 @@
     <string name="history">History</string>
     <string name="history_day">24 hours</string>
     <string name="history_sessions">Sessions</string>
-    <string name="history_weeks">Weeks</string>
     <string name="history_empty">Your history starts now. Pinch saves a point every time it refreshes, so the chart fills in over the next few hours.</string>
     <string name="history_private">Kept on this phone only, for 35 days. Touch the chart to read a value.</string>
     <string name="history_day_caption">Highest in the last 24 hours: %d%%</string>
@@ -99,7 +98,6 @@
         <item quantity="one">%1$d session in 7 days · average peak %2$d%% · hit the limit %3$d times</item>
         <item quantity="other">%1$d sessions in 7 days · average peak %2$d%% · hit the limit %3$d times</item>
     </plurals>
-    <string name="history_weeks_caption">Average week %1$d%% · busiest %2$d%%</string>
     <string name="any_size_hint">One widget for every size. Resize it on the home screen from 1×1 up: it always shows the percent and when it resets, and the crab joins in from 3 cells wide.</string>
     <string name="refresh_reset_note">Pinch also wakes up right after each reset, so the widget never sits on an old number.</string>
     <string name="disclaimer">v%s · Not affiliated with or endorsed by Anthropic. Crab art adapted from clawd-usage-winwidget (MIT).</string>

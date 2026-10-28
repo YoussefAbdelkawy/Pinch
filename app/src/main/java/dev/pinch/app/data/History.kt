@@ -61,13 +61,6 @@ object History {
             .map { (_, ps) -> Window(ps.first().sessionReset!!, ps.maxOf { it.session!! }) }
             .sortedBy { it.endsAt }
 
-    /** Each week seen, oldest first, with its peak. */
-    fun weeks(points: List<Point>): List<Window> =
-        points.filter { it.weekReset != null && it.week != null }
-            .groupBy { it.weekReset!! / 3_600_000 }
-            .map { (_, ps) -> Window(ps.first().weekReset!!, ps.maxOf { it.week!! }) }
-            .sortedBy { it.endsAt }
-
     private fun file(context: Context) = File(context.noBackupFilesDir, FILE)
 
     private fun line(p: Point) = listOf(p.t, p.session, p.week, p.sessionReset, p.weekReset).joinToString(",") { it?.toString() ?: "" }
