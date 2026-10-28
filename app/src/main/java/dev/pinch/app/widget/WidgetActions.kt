@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import dev.pinch.app.Haptics
 import dev.pinch.app.art.Clawd
 
 /**
@@ -18,6 +19,7 @@ class WidgetActions : BroadcastReceiver() {
                 // Start fetching first, then nudge the arrow while the numbers are on their way.
                 // The nudge rests where the arrow started, so it may land before or after the result.
                 val app = context.applicationContext
+                Haptics.tick(app)
                 RefreshWorker.refreshFromTap(app)
                 val pending = goAsync()
                 Thread {

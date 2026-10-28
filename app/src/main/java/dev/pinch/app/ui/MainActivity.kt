@@ -17,8 +17,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
-import android.os.VibrationEffect
-import android.os.Vibrator
 import android.text.Editable
 import android.text.InputType
 import android.text.TextWatcher
@@ -37,6 +35,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import dev.pinch.app.BuildConfig
+import dev.pinch.app.Haptics
 import dev.pinch.app.R
 import dev.pinch.app.Settings
 import dev.pinch.app.art.Clawd
@@ -152,7 +151,7 @@ class MainActivity : Activity() {
             setPadding(dp(10), dp(10), dp(10), dp(10))
             background = rounded(theme.card, 20)
             setOnClickListener {
-                tick()
+                Haptics.tick(this@MainActivity)
                 refreshNow()
             }
         }, LinearLayout.LayoutParams(dp(40), dp(40)))
@@ -595,16 +594,6 @@ class MainActivity : Activity() {
                 } else say(errorText(err), Themes.CRIT)
             }
         }
-    }
-
-    /**
-     * A short tap under the finger. View haptics stay silent while the system's touch feedback
-     * is off (the default on many phones), so this asks the vibrator directly.
-     */
-    private fun tick() {
-        val vibrator = getSystemService(Vibrator::class.java)?.takeIf { it.hasVibrator() } ?: return
-        if (Build.VERSION.SDK_INT >= 29) vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
-        else vibrator.vibrate(VibrationEffect.createOneShot(20, VibrationEffect.DEFAULT_AMPLITUDE))
     }
 
     private fun refreshNow() {
