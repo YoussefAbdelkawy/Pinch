@@ -1,6 +1,7 @@
 name: Release
 
-# Push a tag like v1.2.2 and this builds the signed APK and publishes the GitHub release.
+# Push a tag like v1.2.2, or run it by hand from main with the tag to create, and this builds
+# the signed APK and publishes the GitHub release (the release creates the tag if needed).
 # Needs four repository secrets (Settings > Secrets and variables > Actions):
 #   CLAWD_KEYSTORE_BASE64   the release keystore file, base64-encoded
 #   CLAWD_KEYSTORE_PASSWORD, CLAWD_KEY_ALIAS, CLAWD_KEY_PASSWORD
@@ -10,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Tag to release, e.g. v1.2.2 (must already exist)
+        description: Tag to release, e.g. v1.2.2 (created at the commit this runs on)
         required: true
 
 permissions:
@@ -28,8 +29,6 @@ jobs:
       - name: Resolve tag
         run: echo "TAG=${{ github.event.inputs.tag || github.ref_name }}" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.TAG }}
       # Refuse a tampered gradle-wrapper.jar before running anything.
       - uses: gradle/actions/wrapper-validation@v4
       - uses: actions/setup-java@v4
@@ -91,4 +90,4 @@ jobs:
             printf '\n## Install or update\n\nDownload `%s` below and open it. It installs over the previous version and you stay signed in. The version at the bottom of the app should read v%s.\n' "$apk" "$VERSION"
             printf '\n## Check the file\n\nSHA-256 of `%s`:\n`%s`\n\nSigning certificate (SHA-256):\n`%s`\n' "$apk" "$sum" "$cert"
           } > "$RUNNER_TEMP/notes.md"
-          gh release create "$TAG" "$apk" --title "Pinch $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+          gh release create "$TAG" "$apk" --target "$GITHUB_SHA" --title "Pinch $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
