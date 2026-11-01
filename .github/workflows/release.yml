@@ -1,12 +1,14 @@
 name: Release
 
-# Push a tag like v1.2.2, or run it by hand from main with the tag to create, and this builds
-# the signed APK and publishes the GitHub release (the release creates the tag if needed).
+# Builds the signed APK and publishes the GitHub release (which creates the tag if needed):
+# - on main, by itself, when versionName has notes in docs/releases/v<version>.md and no release yet;
+# - when a tag like v1.2.2 is pushed, or when run by hand with the tag to create.
 # Needs four repository secrets (Settings > Secrets and variables > Actions):
 #   CLAWD_KEYSTORE_BASE64   the release keystore file, base64-encoded
 #   CLAWD_KEYSTORE_PASSWORD, CLAWD_KEY_ALIAS, CLAWD_KEY_PASSWORD
 on:
   push:
+    branches: [main]
     tags: ["v*"]
   workflow_dispatch:
     inputs:
@@ -23,11 +25,37 @@ env:
   CERT_SHA256: 39d7530a8c27d9c90ab535a97cf28c40d1bce65dea88a7bc58946326776cdd52
 
 jobs:
-  release:
+  check:
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.pick.outputs.tag }}
+      go: ${{ steps.pick.outputs.go }}
     steps:
-      - name: Resolve tag
-        run: echo "TAG=${{ github.event.inputs.tag || github.ref_name }}" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+      - id: pick
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$GITHUB_REF" = "refs/heads/main" ] && [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            tag="v$(sed -n 's/^ *versionName = "\(.*\)"/\1/p' app/build.gradle.kts)"
+            go=true
+            [ -f "docs/releases/$tag.md" ] || go=false
+            gh release view "$tag" > /dev/null 2>&1 && go=false
+          else
+            tag="${{ github.event.inputs.tag || github.ref_name }}"
+            go=true
+          fi
+          echo "$tag: release $go"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "go=$go" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: check
+    if: needs.check.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ needs.check.outputs.tag }}
+    steps:
       - uses: actions/checkout@v4
       # Refuse a tampered gradle-wrapper.jar before running anything.
       - uses: gradle/actions/wrapper-validation@v4
