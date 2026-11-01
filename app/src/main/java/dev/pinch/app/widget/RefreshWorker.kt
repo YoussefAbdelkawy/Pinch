@@ -1,6 +1,7 @@
 package dev.pinch.app.widget
 
 import android.content.Context
+import android.net.ConnectivityManager
 import android.os.Build
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -41,8 +42,13 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
             delay(party.size * Clawd.FRAME_MS + 300)
         }
         ClawdWidget.updateAll(ctx, state)
-        // A tap already showed its answer (an error line); retrying it would only spin quietly.
-        if (inputData.getBoolean(KEY_TAP, false)) return Result.success()
+        if (inputData.getBoolean(KEY_TAP, false)) {
+            // The phone has a network but this job was not let onto it: hand over to a plain job,
+            // which the system runs as soon as it may use the network.
+            if (state.error == "offline" && hasNetwork(ctx)) refreshNow(ctx)
+            // Otherwise the tap already showed its answer (an error line); retrying would only spin quietly.
+            return Result.success()
+        }
         return when (state.error) {
             null, "auth_error" -> Result.success()
             else -> Result.retry()
@@ -90,15 +96,21 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
          * Battery Saver or in Doze can be an hour, and a broadcast receiver gets no network there.
          * Android 12+ runs an expedited job right away, with network, even on Battery Saver.
          * (Below 12 an expedited job needs a foreground notification, so it stays a plain job.)
-         * No network constraint: offline, the worker still runs, stops the spinner and says so.
+         * A job only gets the network if it asks for it: in the background (Battery Saver, Doze, a
+         * sleeping app) one without a network constraint runs cut off and reads "offline". So it
+         * asks whenever the phone has a network; with none at all it runs anyway and says so.
          */
         fun refreshFromTap(context: Context) {
             val work = OneTimeWorkRequestBuilder<RefreshWorker>()
                 .setInputData(workDataOf(KEY_TAP to true))
+                .apply { if (hasNetwork(context)) setConstraints(network) }
                 .apply { if (Build.VERSION.SDK_INT >= 31) setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST) }
                 .build()
             WorkManager.getInstance(context).enqueueUniqueWork(TAP, ExistingWorkPolicy.REPLACE, work)
         }
+
+        private fun hasNetwork(context: Context): Boolean =
+            context.getSystemService(ConnectivityManager::class.java)?.activeNetwork != null
 
         fun cancel(context: Context) {
             FastRefresh.cancel(context)
