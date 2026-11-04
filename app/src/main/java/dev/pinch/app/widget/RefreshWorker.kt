@@ -33,26 +33,26 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         }
         // Keeps a 5-minute alarm alive, e.g. after a reboot (alarms do not survive one).
         if (Settings.intervalMinutes(ctx) < 15) FastRefresh.arm(ctx)
-        val state = UsageRepo.refresh(ctx)
-        FastRefresh.armReset(ctx, state.usage?.nextReset)
-        if (state.justReset) {
-            // A window reset: Clawd jumps for joy with confetti, then settles.
+        val states = UsageRepo.refreshAll(ctx)
+        FastRefresh.armReset(ctx, nextReset(states))
+        val reset = states.filterValues { it.justReset }.keys
+        if (reset.isNotEmpty()) {
+            // A window reset: Clawd jumps for joy with confetti on that account's widgets, then settles.
             val party = Clawd.celebrate()
-            ClawdWidget.updateAll(ctx, state, party)
+            ClawdWidget.updateAll(ctx, states, party, actFor = reset)
             delay(party.size * Clawd.FRAME_MS + 300)
         }
-        ClawdWidget.updateAll(ctx, state)
+        ClawdWidget.updateAll(ctx, states)
+        val errors = states.values.mapNotNull { it.error }
         if (inputData.getBoolean(KEY_TAP, false)) {
             // The phone has a network but this job was not let onto it: hand over to a plain job,
             // which the system runs as soon as it may use the network.
-            if (state.error == "offline" && hasNetwork(ctx)) refreshNow(ctx)
+            if ("offline" in errors && hasNetwork(ctx)) refreshNow(ctx)
             // Otherwise the tap already showed its answer (an error line); retrying would only spin quietly.
             return Result.success()
         }
-        return when (state.error) {
-            null, "auth_error" -> Result.success()
-            else -> Result.retry()
-        }
+        // A signed-out account is not fixed by trying again; anything else may be.
+        return if (errors.all { it == "auth_error" }) Result.success() else Result.retry()
     }
 
     companion object {
@@ -63,9 +63,12 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
 
         private val network = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
+        /** The soonest reset of any account: the widget wakes for each one. */
+        fun nextReset(states: Map<String, UsageRepo.State>): Long? = states.values.mapNotNull { it.usage?.nextReset }.minOrNull()
+
         fun schedule(context: Context, replace: Boolean = false) {
             FastRefresh.arm(context)
-            FastRefresh.armReset(context, UsageRepo.cached(context).usage?.nextReset)
+            FastRefresh.armReset(context, nextReset(UsageRepo.cachedAll(context)))
             val minutes = Settings.intervalMinutes(context).toLong().coerceAtLeast(15)
             val work = PeriodicWorkRequestBuilder<RefreshWorker>(minutes, TimeUnit.MINUTES)
                 .setConstraints(network)

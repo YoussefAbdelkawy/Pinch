@@ -55,6 +55,26 @@ You can change these in the app:
 
 To refresh right away, tap the refresh button on the widget. Tap the crab to see a trick.
 
+### More than one Claude account
+
+Pinch can show up to 3 accounts, for example a personal one and a work one.
+
+1. In the app, tap **Add another account**.
+2. Your browser is probably still signed in to your first account. On claude.com, log out or switch to the other account.
+3. Tap **Sign in with Claude**, approve, and paste the code, as for the first account.
+4. Give each account a short name, like Personal or Work.
+
+Then:
+
+- The widget shows one account at a time, with its name at the top and a dot for each account at the bottom. Tap the name or the dots to go to the next account.
+- Each widget remembers its own account, so you can put one widget per account on your home screen.
+- At the smallest sizes, the widget shows the account's first letter instead of its name.
+- Every refresh fetches all accounts at once, so the numbers are fresh whichever account you look at.
+- The app has a tab for each account. Each account has its own theme and crab skin; a new one starts with the look of the account you added it from.
+- If one account needs signing in again, only its page says so, its dot turns yellow, and the other accounts keep working.
+
+With only one account, the widget and the app look the same as before.
+
 <p align="center"><img src="docs/themes.png" width="900" alt="All themes" /></p>
 
 ## How the crab behaves
@@ -73,7 +93,7 @@ He also moves along the scene as your session fills up, so his position shows yo
 
 - **Your password never goes into Pinch.** You only type it on claude.com, in your own browser.
 - **Pinch only talks to Anthropic.** It connects to `api.anthropic.com` for your usage, `platform.claude.com` for sign-in, and `status.claude.com` for the public status page. It has no server of its own, no ads and no tracking.
-- **Your sign-in is encrypted on your phone.** The key is stored in the Android Keystore, and the token is never logged or backed up. **Sign out** deletes it.
+- **Your sign-in is encrypted on your phone.** The key is stored in the Android Keystore, and the token is never logged or backed up. **Sign out** (or **Remove**, with several accounts) deletes it, with that account's numbers and history.
 - **The sign-in steps are protected.** The sign-in page opens in your own browser. The code is hidden from screenshots and other apps. The clipboard is cleared after you connect.
 - **It asks for very few permissions:** internet access and network state.
 

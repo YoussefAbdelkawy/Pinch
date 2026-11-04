@@ -2,15 +2,18 @@ package dev.pinch.app.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import dev.pinch.app.Accounts
 import dev.pinch.app.Settings
 import dev.pinch.app.auth.ClaudeAuth
 import org.json.JSONObject
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 
 /**
- * Fetches usage and remembers the last good numbers. Only non-secret data lives here
- * (percentages, reset times, status text) in app-private storage.
+ * Fetches usage and remembers the last good numbers, per account. Only non-secret data lives
+ * here (percentages, reset times, status text) in app-private storage. The service status is
+ * one for everyone.
  */
 object UsageRepo {
 
@@ -18,6 +21,7 @@ object UsageRepo {
     private const val STATUS_URL = "https://status.claude.com/api/v2/summary.json"
     private const val PREFS = "usage_cache"
     private const val STATUS_WAIT_MS = 2_000L
+    private const val USAGE_WAIT_MS = 30_000L
 
     data class State(
         val usage: Usage?,
@@ -30,71 +34,109 @@ object UsageRepo {
 
     data class ServiceStatus(val indicator: String, val description: String)
 
-    /** The last numbers, settled to now: a window whose reset time has passed shows as reset. */
-    fun cached(context: Context): State = raw(context).let { it.copy(usage = it.usage?.settled()) }
+    /** The last numbers of [account], settled to now: a window whose reset time has passed shows as reset. */
+    fun cached(context: Context, account: String): State = raw(context, account).let { it.copy(usage = it.usage?.settled()) }
+
+    /** Every account's last numbers. */
+    fun cachedAll(context: Context): Map<String, State> = Accounts.list(context).associateWith { cached(context, it) }
 
     /** The last numbers exactly as fetched. */
-    private fun raw(context: Context): State {
-        val p = prefs(context)
+    private fun raw(context: Context, account: String): State {
+        val p = prefs(context, account)
         val usage = p.getString("usage", null)?.let { Usage.fromCache(it) }
-        val status = p.getString("status_indicator", null)?.let {
-            ServiceStatus(it, p.getString("status_desc", "") ?: "")
-        }
-        return State(usage, p.getString("error", null), status)
+        return State(usage, p.getString("error", null), status(context))
     }
+
+    private fun status(context: Context): ServiceStatus? {
+        val p = prefs(context, Accounts.FIRST)
+        return p.getString("status_indicator", null)?.let { ServiceStatus(it, p.getString("status_desc", "") ?: "") }
+    }
+
+    private fun saveStatus(context: Context, s: ServiceStatus) =
+        prefs(context, Accounts.FIRST).edit().putString("status_indicator", s.indicator).putString("status_desc", s.description).apply()
 
     /** Stores numbers as if just fetched; used by the debug demo hook. */
-    fun store(context: Context, usage: Usage, status: ServiceStatus?) {
-        prefs(context).edit().putString("usage", usage.toJson()).remove("error")
-            .putString("status_indicator", status?.indicator).putString("status_desc", status?.description).apply()
+    fun store(context: Context, account: String, usage: Usage, status: ServiceStatus?, error: String? = null) {
+        prefs(context, account).edit().putString("usage", usage.toJson()).putString("error", error).apply()
+        status?.let { saveStatus(context, it) }
     }
 
-    @Synchronized
-    fun refresh(context: Context): State {
-        if (Settings.demo(context)) return cached(context)
-        val before = raw(context)
-        // Both requests at once: the status page must not hold up the numbers, and a slow one
-        // is given up on after a few seconds (the last status stays).
+    /** Fetches one account (and the status page). */
+    fun refresh(context: Context, account: String): State = refreshAll(context, listOf(account)).getValue(account)
+
+    /**
+     * Fetches every account side by side, and the status page once, so switching accounts on
+     * the widget always shows numbers as fresh as the last refresh.
+     */
+    fun refreshAll(context: Context, accounts: List<String> = Accounts.list(context)): Map<String, State> {
+        if (Settings.demo(context)) return accounts.associateWith { cached(context, it) }
+        val before = status(context)
+        // The status page must not hold up the numbers: a slow one is given up on after a few
+        // seconds (the last status stays).
         val statusTask = FutureTask { fetchStatus() }.also { Thread(it).start() }
-        val result = fetchUsage(context)
+        val tasks = accounts.associateWith { a -> FutureTask { refreshOne(context, a) }.also { Thread(it).start() } }
+        val results = tasks.mapValues { (a, t) ->
+            try {
+                t.get(USAGE_WAIT_MS, TimeUnit.MILLISECONDS)
+            } catch (_: Exception) {
+                raw(context, a).let { it.copy(usage = it.usage?.settled(), error = "offline") }
+            }
+        }
         val status = try {
             statusTask.get(STATUS_WAIT_MS, TimeUnit.MILLISECONDS)
         } catch (_: Exception) {
             null
-        } ?: before.status
-        val p = prefs(context).edit()
-        status?.let { p.putString("status_indicator", it.indicator).putString("status_desc", it.description) }
+        }
+        status?.let { saveStatus(context, it) }
+        val shown = status ?: before
+        return results.mapValues { it.value.copy(status = shown) }
+    }
 
+    private val locks = ConcurrentHashMap<String, Any>()
+
+    private fun refreshOne(context: Context, account: String): State = synchronized(locks.getOrPut(account) { Any() }) {
+        val before = raw(context, account)
+        val result = fetchUsage(context, account)
+        val p = prefs(context, account).edit()
         if (result.second != null) {
             p.putString("error", result.second).apply()
-            return before.copy(usage = before.usage?.settled(), error = result.second, status = status)
+            return before.copy(usage = before.usage?.settled(), error = result.second)
         }
         val usage = result.first!!
         p.putString("usage", usage.toJson()).remove("error").apply()
-        History.record(context, usage)
+        History.record(context, account, usage)
 
         // Same rule as Clawd: the reset time moved forward and the percent dropped. The week
         // resetting counts too: after a maxed-out week that is the bigger relief.
-        fun reset(old: Limit?, new: Limit?) = old?.resetsAt != null && new != null &&
-            (new.resetsAt == null || new.resetsAt > old.resetsAt) && new.percent < old.percent
         val justReset = reset(before.usage?.session, usage.session) || reset(before.usage?.weekly, usage.weekly)
-        return State(usage.settled(), null, status, justReset = justReset)
+        return State(usage.settled(), null, null, justReset = justReset)
     }
 
-    fun clear(context: Context) = prefs(context).edit().clear().commit()
+    private fun reset(old: Limit?, new: Limit?) = old?.resetsAt != null && new != null &&
+        (new.resetsAt == null || new.resetsAt > old.resetsAt) && new.percent < old.percent
 
-    /** Told whenever stored numbers change (a refresh from the widget or the background). Keep a reference: it is held weakly. */
+    /** Forgets an account's numbers (it was removed). The shared status stays. */
+    fun clear(context: Context, account: String) = prefs(context, account).edit().remove("usage").remove("error").commit()
+
+    /**
+     * Told whenever stored numbers change (a refresh from the widget or the background), for
+     * any account. Keep a reference: it is held weakly.
+     */
     fun listen(context: Context, l: SharedPreferences.OnSharedPreferenceChangeListener) =
-        prefs(context).registerOnSharedPreferenceChangeListener(l)
+        allPrefs(context).forEach { it.registerOnSharedPreferenceChangeListener(l) }
 
     fun unlisten(context: Context, l: SharedPreferences.OnSharedPreferenceChangeListener) =
-        prefs(context).unregisterOnSharedPreferenceChangeListener(l)
+        allPrefs(context).forEach { it.unregisterOnSharedPreferenceChangeListener(l) }
 
-    private fun fetchUsage(context: Context): Pair<Usage?, String?> {
-        val token = ClaudeAuth.accessToken(context) ?: return null to (ClaudeAuth.lastError ?: "auth_error")
+    private fun allPrefs(context: Context) = listOf("a1", "a2", "a3").map { prefs(context, it) }
+
+    private fun fetchUsage(context: Context, account: String): Pair<Usage?, String?> {
+        val token = ClaudeAuth.accessToken(context, account)
+            ?: return null to (ClaudeAuth.lastError(account) ?: "auth_error")
         var r = callUsage(token)
         if (r.code == 401 || r.code == 403) {
-            val fresh = ClaudeAuth.refresh(context, force = true) ?: return null to (ClaudeAuth.lastError ?: "auth_error")
+            val fresh = ClaudeAuth.refresh(context, account, force = true)
+                ?: return null to (ClaudeAuth.lastError(account) ?: "auth_error")
             r = callUsage(fresh)
         }
         return when {
@@ -129,6 +171,8 @@ object UsageRepo {
         }
     }
 
-    private fun prefs(context: Context) =
-        context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    /** The first account keeps the file from before there were several. */
+    private fun prefs(context: Context, account: String) = context.applicationContext.getSharedPreferences(
+        if (account == Accounts.FIRST) PREFS else "${PREFS}_$account", Context.MODE_PRIVATE
+    )
 }
