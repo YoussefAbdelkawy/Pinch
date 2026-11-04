@@ -175,4 +175,21 @@
             android:textColor="#FF8B8B94"
             android:textSize="10sp" />
     </LinearLayout>
+    <!-- With several accounts, at sizes with no room for the name: the account's letter. Tap: next account. -->
+    <TextView
+        android:id="@+id/badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="5dp"
+        android:layout_marginEnd="6dp"
+        android:background="@drawable/badge_bg"
+        android:fontFamily="sans-serif-medium"
+        android:minWidth="16dp"
+        android:gravity="center"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:textColor="#FFE4E4E7"
+        android:textSize="9sp"
+        android:visibility="gone" />
 </FrameLayout>

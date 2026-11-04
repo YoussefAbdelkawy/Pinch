@@ -1,6 +1,7 @@
 package dev.pinch.app.data
 
 import android.content.Context
+import dev.pinch.app.Accounts
 import java.io.File
 
 /**
@@ -29,21 +30,21 @@ object History {
 
     private val lock = Any()
 
-    fun record(context: Context, u: Usage, now: Long = u.fetchedAt) = synchronized(lock) {
+    fun record(context: Context, account: String, u: Usage, now: Long = u.fetchedAt) = synchronized(lock) {
         val p = Point(now, u.session?.percent, u.weekly?.percent, u.session?.resetsAt, u.weekly?.resetsAt)
-        val all = load(context)
+        val all = load(context, account)
         val last = all.lastOrNull()
         if (last != null && last.session == p.session && last.week == p.week &&
             last.sessionReset == p.sessionReset && now - last.t < SAME_EVERY_MS) return@synchronized
         val kept = all.filter { now - it.t < KEEP_MS } + p
-        val f = file(context)
+        val f = file(context, account)
         val tmp = File(f.parentFile, "$FILE.tmp")
         tmp.writeText(kept.joinToString("\n") { line(it) })
         tmp.renameTo(f)
     }
 
-    fun load(context: Context): List<Point> = synchronized(lock) {
-        val f = file(context)
+    fun load(context: Context, account: String): List<Point> = synchronized(lock) {
+        val f = file(context, account)
         if (!f.exists()) return emptyList()
         return try {
             f.readLines().mapNotNull(::parse).sortedBy { it.t }
@@ -52,7 +53,7 @@ object History {
         }
     }
 
-    fun clear(context: Context) = synchronized(lock) { file(context).delete() }
+    fun clear(context: Context, account: String) = synchronized(lock) { file(context, account).delete() }
 
     /** Each 5-hour window seen, oldest first, with its peak. */
     fun sessions(points: List<Point>): List<Window> =
@@ -61,7 +62,9 @@ object History {
             .map { (_, ps) -> Window(ps.first().sessionReset!!, ps.maxOf { it.session!! }) }
             .sortedBy { it.endsAt }
 
-    private fun file(context: Context) = File(context.noBackupFilesDir, FILE)
+    /** The first account keeps the file from before there were several. */
+    private fun file(context: Context, account: String) =
+        File(context.noBackupFilesDir, if (account == Accounts.FIRST) FILE else "history_$account.csv")
 
     private fun line(p: Point) = listOf(p.t, p.session, p.week, p.sessionReset, p.weekReset).joinToString(",") { it?.toString() ?: "" }
 

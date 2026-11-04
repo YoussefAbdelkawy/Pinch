@@ -188,4 +188,26 @@ class CoreTest {
         assertEquals(listOf("Fable", "Opus"), u.models.map { it.label })
         assertEquals("Fable", u.topModel!!.label)
     }
+
+    /** A tap on the name or dots goes to the next account, and after the last back to the first. */
+    @Test fun nextAccountLoops() {
+        val ids = listOf("a1", "a3", "a2")
+        assertEquals("a3", Accounts.nextOf(ids, "a1"))
+        assertEquals("a2", Accounts.nextOf(ids, "a3"))
+        assertEquals("a1", Accounts.nextOf(ids, "a2"))
+        // An account that was removed: start again at the first.
+        assertEquals("a1", Accounts.nextOf(ids, "gone"))
+        assertEquals("a1", Accounts.nextOf(listOf("a1"), "a1"))
+    }
+
+    /** The same Claude account added twice is caught by who the token response says it is. */
+    @Test fun identityFromTokenResponse() {
+        val a = JSONObject("""{"access_token":"x","account":{"uuid":"u1","email_address":"e"},"organization":{"uuid":"o1"}}""")
+        val b = JSONObject("""{"access_token":"x","account":{"uuid":"u1"},"organization":{"uuid":"o2"}}""")
+        assertEquals("u1:o1", dev.pinch.app.auth.ClaudeAuth.identity(a))
+        // Same person, another organisation: another set of limits, so another account.
+        assertTrue(dev.pinch.app.auth.ClaudeAuth.identity(a) != dev.pinch.app.auth.ClaudeAuth.identity(b))
+        // Nothing to go by: no check, rather than a wrong one.
+        assertNull(dev.pinch.app.auth.ClaudeAuth.identity(JSONObject("""{"access_token":"x"}""")))
+    }
 }

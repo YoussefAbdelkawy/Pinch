@@ -107,5 +107,23 @@
     <string name="err_rate">Rate limited by Anthropic. Wait a minute and try again.</string>
     <string name="err_offline">Can\'t reach Anthropic. Check your connection.</string>
     <string name="err_format">Anthropic changed the usage format. Check for an app update.</string>
+    <string name="err_duplicate">That Claude account is already in Pinch. In your browser, log out of claude.com or switch to the other account, then tap Sign in again.</string>
+
+    <string name="account_n">Account %d</string>
+    <string name="add_account">Add an account</string>
+    <string name="add_account_tab">+ Add</string>
+    <string name="new_account_tab">New</string>
+    <string name="add_another_account">Add another account</string>
+    <string name="add_guide">Your browser is probably still signed in to the account you already added. On claude.com, log out or switch to the other account first. Then tap Sign in below and approve.</string>
+    <string name="cancel">Cancel</string>
+    <string name="rename">Rename</string>
+    <string name="remove">Remove</string>
+    <string name="remove_title">Remove %s?</string>
+    <string name="remove_note">Pinch signs it out and deletes its numbers and history on this phone. Your Claude account itself is not touched.</string>
+    <string name="save">Save</string>
+    <string name="name_title">Name this account</string>
+    <string name="name_first">Name your first account</string>
+    <string name="name_note">A short name for the widget and the tabs. It stays on this phone.</string>
+    <string name="name_hint">Personal, Work…</string>
     <string name="err_other">Something went wrong (%s). Try again.</string>
 </resources>

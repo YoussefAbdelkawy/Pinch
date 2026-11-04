@@ -285,4 +285,36 @@
                 android:textSize="10sp" />
         </LinearLayout>
     </LinearLayout>
+    <!-- With several accounts, at sizes with no room for the name: the account's letter. Tap: next account. -->
+    <TextView
+        android:id="@+id/badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="5dp"
+        android:layout_marginEnd="6dp"
+        android:background="@drawable/badge_bg"
+        android:fontFamily="sans-serif-medium"
+        android:minWidth="16dp"
+        android:gravity="center"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:textColor="#FFE4E4E7"
+        android:textSize="9sp"
+        android:visibility="gone" />
+
+    <!-- With several accounts: one dot per account, the shown one lit. Tap: next account. -->
+    <TextView
+        android:id="@+id/dots"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:includeFontPadding="false"
+        android:paddingStart="10dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="2dp"
+        android:letterSpacing="0.5"
+        android:textSize="11sp"
+        android:visibility="gone" />
 </FrameLayout>

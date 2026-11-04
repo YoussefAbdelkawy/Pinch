@@ -34,6 +34,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import dev.pinch.app.Accounts
 import dev.pinch.app.BuildConfig
 import dev.pinch.app.Haptics
 import dev.pinch.app.R
@@ -70,17 +71,24 @@ class MainActivity : Activity() {
     /** Which numbers the screen shows, so a refresh made elsewhere (the widget, the background) is noticed. */
     private var shown: String? = null
 
-    private val redraw = Runnable { if (!busy && !isFinishing && stamp(UsageRepo.cached(this)) != shown) build() }
+    /** The account the screen is about: its tab. */
+    private val account get() = Accounts.current(this)
+
+    private val redraw = Runnable { if (!busy && !isFinishing && stamp() != shown) build() }
     // One refresh writes several keys: wait for the last before redrawing.
     private val usageChanged = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
         main.removeCallbacks(redraw)
         main.postDelayed(redraw, 150)
     }
 
-    private fun stamp(s: UsageRepo.State) = "${s.usage?.fetchedAt}|${s.error}|${s.status?.indicator}|${s.status?.description}"
+    /** What the screen shows of every account, so a refresh made elsewhere (the widget, the background) is noticed. */
+    private fun stamp() = UsageRepo.cachedAll(this).entries.joinToString(";") { (a, s) ->
+        "$a|${s.usage?.fetchedAt}|${s.error}|${s.status?.indicator}|${s.status?.description}"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        openAccountFrom(intent)
         build()
         // Redraw every widget on the home screen: one the launcher kept across a reinstall, or
         // one that missed its first update, comes back to life just by opening the app.
@@ -91,16 +99,31 @@ class MainActivity : Activity() {
         }
     }
 
+    /** A tap on a widget's "sign in again" opens the app on that account's tab. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (openAccountFrom(intent)) build()
+    }
+
+    private fun openAccountFrom(intent: Intent?): Boolean {
+        val id = intent?.getStringExtra(EXTRA_ACCOUNT) ?: return false
+        intent.removeExtra(EXTRA_ACCOUNT)
+        if (id !in Accounts.list(this) || id == account) return false
+        Accounts.setCurrent(this, id)
+        return true
+    }
+
     override fun onResume() {
         super.onResume()
         // Coming back from the browser with the code on the clipboard: point at the field.
-        if (!ClaudeAuth.isSignedIn(this) && ClaudeAuth.hasPendingLogin(this)) codeInput?.requestFocus()
+        if (ClaudeAuth.hasPendingLogin(this, signInTarget())) codeInput?.requestFocus()
         // Opening the app is a good moment for fresh numbers, if the last ones are over a minute old.
-        val age = System.currentTimeMillis() - (UsageRepo.cached(this).usage?.fetchedAt ?: 0L)
-        if (ClaudeAuth.isSignedIn(this) && age > 60_000) refreshNow()
+        val age = System.currentTimeMillis() - (UsageRepo.cached(this, account).usage?.fetchedAt ?: 0L)
+        if (ClaudeAuth.isSignedIn(this) && age > 60_000 && Accounts.adding(this) == null) refreshNow()
         // A widget was added or removed while we were away (from the launcher or the pin dialog),
         // or the widget's refresh button fetched new numbers.
-        else if (ClawdWidget.ids(this).size != widgetCount || stamp(UsageRepo.cached(this)) != shown) build()
+        else if (ClawdWidget.ids(this).size != widgetCount || stamp() != shown) build()
         // While on screen, show what a background refresh fetches.
         UsageRepo.listen(this, usageChanged)
         tick.run()
@@ -121,12 +144,15 @@ class MainActivity : Activity() {
     // ------------------------------------------------------------------ screen ----
 
     private fun build() {
-        theme = Settings.theme(this)
+        val account = account
+        val adding = Accounts.adding(this)
+        // While adding, the look the new account will start with: the one of the tab it is added from.
+        theme = Settings.theme(this, account)
         window.statusBarColor = theme.bg
         window.navigationBarColor = theme.bg
         val signedIn = ClaudeAuth.isSignedIn(this)
-        val state = UsageRepo.cached(this)
-        shown = stamp(state)
+        val state = UsageRepo.cached(this, account)
+        shown = stamp()
         ticks.clear()
 
         val col = LinearLayout(this).apply {
@@ -137,7 +163,7 @@ class MainActivity : Activity() {
         // Top bar: the name, the plan, and a refresh button.
         val top = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         top.addView(text(getString(R.string.app_name), 22f, theme.textHi, bold = true))
-        state.usage?.plan?.takeIf { signedIn && it.isNotEmpty() }?.let { plan ->
+        state.usage?.plan?.takeIf { signedIn && adding == null && it.isNotEmpty() }?.let { plan ->
             top.addView(text(plan, 12f, theme.accent, bold = true).apply {
                 background = rounded(Pix.withAlpha(theme.accent, 0.16f), 10)
                 setPadding(dp(8), dp(3), dp(8), dp(3))
@@ -157,10 +183,21 @@ class MainActivity : Activity() {
         }, LinearLayout.LayoutParams(dp(40), dp(40)))
         col.addView(top, LinearLayout.LayoutParams(-1, dp(48)))
 
+        // Several accounts, or one being added: a tab each, and the whole screen follows the tab.
+        if (Accounts.multi(this) || adding != null) col.addView(accountTabs(adding), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
+
+        if (adding != null) {
+            // Adding an account: signing it in is all this screen is about until it is done or cancelled.
+            col.addView(header(getString(R.string.add_account)))
+            col.addView(card { addSection(it, adding) })
+            finishBuild(col)
+            return
+        }
+
         // Clawd on his scene.
         val clawd = ClawdView(this).apply {
             this.theme = this@MainActivity.theme
-            skin = Settings.skin(this@MainActivity, this@MainActivity.theme)
+            skin = Settings.skin(this@MainActivity, account, this@MainActivity.theme)
             halves = state.usage?.heartHalves ?: 6
             position = if (signedIn) state.usage?.session?.percent else null
             mood = WidgetRenderer.moodOf(state, signedIn)
@@ -171,7 +208,13 @@ class MainActivity : Activity() {
         col.addView(clawd, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
         col.addView(text(getString(R.string.tap_clawd), 12f, theme.muted).apply { setPadding(0, dp(6), 0, 0); gravity = Gravity.CENTER })
 
+        // Signed out of this account: signing in again comes first (a widget's "sign in again" lands here).
+        val accountFirst = !signedIn || state.usage == null || state.error == "auth_error"
         if (signedIn && state.usage != null) {
+            if (accountFirst) {
+                col.addView(header(getString(R.string.account)))
+                col.addView(card { accountSection(it, signedIn, state) })
+            }
             col.addView(header(getString(R.string.now)))
             col.addView(card { nowSection(it, state) })
             col.addView(header(getString(R.string.history)))
@@ -190,7 +233,7 @@ class MainActivity : Activity() {
         col.addView(header(getString(R.string.theme)))
         col.addView(card { box ->
             val flow = FlowLayout(this, dp(8))
-            val choice = Settings.themeChoice(this)
+            val choice = Settings.themeChoice(this, account)
             val seasonal = Themes.byId(Themes.seasonal(java.time.LocalDate.now()))
             flow.addView(chip(getString(R.string.by_season, seasonal.name), seasonal.accent, choice == "auto") { setTheme("auto") })
             for (t in Themes.ALL) flow.addView(chip(t.name, t.accent, choice == t.id) { setTheme(t.id) })
@@ -226,11 +269,15 @@ class MainActivity : Activity() {
             }
         })
 
-        if (signedIn && state.usage != null) {
+        if (!accountFirst) {
             col.addView(header(getString(R.string.account)))
             col.addView(card { accountSection(it, signedIn, state) })
         }
 
+        finishBuild(col)
+    }
+
+    private fun finishBuild(col: LinearLayout) {
         // Footer: version, not affiliated, and the credit the crab art's license asks for.
         col.addView(text(getString(R.string.disclaimer, BuildConfig.VERSION_NAME), 12f, theme.muted).apply {
             gravity = Gravity.CENTER
@@ -369,7 +416,7 @@ class MainActivity : Activity() {
     private var historyMode = HistoryChart.Mode.DAY
 
     private fun historySection(box: LinearLayout) {
-        val points = History.load(this)
+        val points = History.load(this, account)
         val chart = HistoryChart(this).apply { theme = this@MainActivity.theme }
         val caption = text("", 13f, theme.text).apply { setPadding(0, dp(10), 0, 0) }
         val empty = text(getString(R.string.history_empty), 13f, theme.muted).apply {
@@ -447,7 +494,11 @@ class MainActivity : Activity() {
         val holder = FrameLayout(this)
         box.addView(holder, LinearLayout.LayoutParams(dp(wDp), dp(hDp)).apply { topMargin = dp(14); gravity = Gravity.CENTER_HORIZONTAL })
         try {
-            val rv = WidgetRenderer.build(this, state, signedIn, wDp, hDp, responsive = false)
+            val acc = account
+            val rv = WidgetRenderer.build(
+                this, state, signedIn && ClaudeAuth.hasTokens(this, acc), wDp, hDp,
+                look = WidgetRenderer.look(this, acc), responsive = false, page = WidgetRenderer.Page.of(this, acc, -1)
+            )
             holder.addView(rv.apply(applicationContext, holder))
         } catch (_: Exception) {
             holder.addView(text(getString(R.string.preview_unavailable), 13f, theme.muted))
@@ -470,6 +521,8 @@ class MainActivity : Activity() {
     private fun accountSection(box: LinearLayout, signedIn: Boolean, state: UsageRepo.State) {
         val status = text("", 14f, theme.text)
         statusText = status
+        val multi = Accounts.multi(this)
+        if (multi) box.addView(text(Accounts.label(this, account), 16f, theme.textHi, bold = true).apply { setPadding(0, 0, 0, dp(4)) })
         box.addView(status)
         if (signedIn) {
             when (state.error) {
@@ -477,19 +530,73 @@ class MainActivity : Activity() {
                 null -> say(getString(R.string.connected), Themes.OK)
                 else -> say(getString(R.string.connected_but, errorText(state.error)), Themes.WARN)
             }
-            box.addView(button(getString(R.string.sign_out), secondary = true) { signOut() },
-                LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
-            if (state.error == "auth_error") box.addView(signInViews(), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            if (multi) {
+                row.addView(button(getString(R.string.rename), secondary = true) { askName(account) },
+                    LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = dp(8) })
+                row.addView(button(getString(R.string.remove), secondary = true) { confirmRemove(account) }, LinearLayout.LayoutParams(0, -2, 1f))
+            } else {
+                row.addView(button(getString(R.string.sign_out), secondary = true) { remove(account) }, LinearLayout.LayoutParams(0, -2, 1f))
+            }
+            box.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
+            if (state.error == "auth_error") box.addView(signInViews(account), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
+            if (Accounts.freeId(this) != null) {
+                box.addView(button(getString(R.string.add_another_account), secondary = true) { startAdding() },
+                    LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
+            }
         } else {
             say(getString(R.string.not_connected), theme.text)
-            box.addView(signInViews(), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
+            box.addView(signInViews(signInTarget()), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
         }
     }
 
-    private fun signInViews(): View {
+    /** One tab per account, the open one lit, then "+ Add" while there is room (or the new one being added). */
+    private fun accountTabs(adding: String?): View {
+        val tabs = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            background = rounded(theme.card, 12)
+            setPadding(dp(3), dp(3), dp(3), dp(3))
+        }
+        fun tab(label: String, on: Boolean, warn: Boolean = false, onClick: () -> Unit) = text(label, 13f, if (on) theme.textHi else theme.muted, bold = true).apply {
+            gravity = Gravity.CENTER
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+            setPadding(dp(6), dp(8), dp(6), dp(8))
+            background = if (on) rounded(Pix.mix(theme.card, theme.accent, 0.3f), 10) else null
+            if (warn) setTextColor(Themes.WARN)
+            setOnClickListener { onClick() }
+        }
+        for (id in Accounts.list(this)) {
+            val out = UsageRepo.cached(this, id).error == "auth_error"
+            tabs.addView(tab(Accounts.label(this, id), adding == null && id == account, warn = out) {
+                if (adding != null) cancelAdding()
+                Accounts.setCurrent(this, id)
+                build()
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+        }
+        if (adding != null) tabs.addView(tab(getString(R.string.new_account_tab), true) {}, LinearLayout.LayoutParams(0, -2, 1f))
+        else if (Accounts.freeId(this) != null) tabs.addView(tab(getString(R.string.add_account_tab), false) { startAdding() }, LinearLayout.LayoutParams(-2, -2))
+        return tabs
+    }
+
+    /** The guided sign-in for a new account: why the browser must be on the other account first. */
+    private fun addSection(box: LinearLayout, id: String) {
+        val status = text("", 14f, theme.text)
+        statusText = status
+        box.addView(text(getString(R.string.add_guide), 14f, theme.text))
+        box.addView(status.apply { setPadding(0, dp(8), 0, 0) })
+        box.addView(signInViews(id), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
+        box.addView(button(getString(R.string.cancel), secondary = true) { cancelAdding(); build() },
+            LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
+    }
+
+    /** Who a sign-in on screen is for: the account being added, else the open tab (or the first, when there is none). */
+    private fun signInTarget(): String = Accounts.adding(this) ?: if (ClaudeAuth.isSignedIn(this)) account else Accounts.freeId(this) ?: Accounts.FIRST
+
+    private fun signInViews(target: String): View {
         val box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         box.addView(text(getString(R.string.step1), 13f, theme.muted))
-        box.addView(button(getString(R.string.sign_in)) { startSignIn() }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
+        box.addView(button(getString(R.string.sign_in)) { startSignIn(target) }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
         box.addView(text(getString(R.string.step2), 13f, theme.muted).apply { setPadding(0, dp(14), 0, 0) })
         val input = EditText(this).apply {
             hint = getString(R.string.paste_code)
@@ -515,14 +622,15 @@ class MainActivity : Activity() {
         }
         codeInput = input
         box.addView(input, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
-        box.addView(button(getString(R.string.connect)) { connect(input) }.apply { filterTouchesWhenObscured = true },
+        box.addView(button(getString(R.string.connect)) { connect(input, target) }.apply { filterTouchesWhenObscured = true },
             LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
         return box
     }
 
     private fun skinGrid(box: LinearLayout) {
         val flow = FlowLayout(this, dp(8))
-        val choice = Settings.skinChoice(this)
+        val account = account
+        val choice = Settings.skinChoice(this, account)
         val sand = Scenes.sand(theme.scene)
         val cellW = (pxToDp(resources.displayMetrics.widthPixels) - 32 - 28 - 24) / 4
         val autoSkin = Skins.get(this, theme.skin)
@@ -533,7 +641,7 @@ class MainActivity : Activity() {
                 gravity = Gravity.CENTER
                 setPadding(dp(4), dp(8), dp(4), dp(6))
                 background = rounded(if (id == choice) Pix.mix(theme.card, theme.accent, 0.25f) else theme.bg, 10, if (id == choice) theme.accent else 0)
-                setOnClickListener { Settings.setSkinChoice(this@MainActivity, id); ClawdWidget.updateAll(this@MainActivity); build() }
+                setOnClickListener { Settings.setSkinChoice(this@MainActivity, account, id); ClawdWidget.updateAll(this@MainActivity); build() }
             }
             val img = ImageView(this).apply {
                 setImageBitmap(WidgetRenderer.crabBitmap(Frame(), skin, sand))
@@ -549,8 +657,8 @@ class MainActivity : Activity() {
 
     // ----------------------------------------------------------------- actions ----
 
-    private fun startSignIn() {
-        val url = ClaudeAuth.buildLoginUrl(this)
+    private fun startSignIn(target: String) {
+        val url = ClaudeAuth.buildLoginUrl(this, target)
         try {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
                 addCategory(Intent.CATEGORY_BROWSABLE)
@@ -564,22 +672,30 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun connect(input: EditText) {
+    private fun connect(input: EditText, target: String) {
         if (busy) return
         val code = input.text.toString().trim()
         if (code.isEmpty()) {
             pasteFromClipboard(input)
             if (input.text.isEmpty()) { say(getString(R.string.paste_first), Themes.WARN); return }
-            return connect(input)
+            return connect(input, target)
         }
-        if (!ClaudeAuth.hasPendingLogin(this)) { say(getString(R.string.start_first), Themes.WARN); return }
+        if (!ClaudeAuth.hasPendingLogin(this, target)) { say(getString(R.string.start_first), Themes.WARN); return }
         (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(input.windowToken, 0)
         busy = true
         say(getString(R.string.connecting), theme.text)
         val app = applicationContext
+        val isNew = target !in Accounts.list(this)
+        val from = account
         io.execute {
-            val err = ClaudeAuth.completeLogin(app, code)
-            val state = if (err == null) UsageRepo.refresh(app) else null
+            val err = ClaudeAuth.completeLogin(app, target, code)
+            if (err == null && isNew) {
+                // Before the list changes: the first account keeps the sign-in it had.
+                Accounts.keep(app)
+                Settings.copyLook(app, from, target)
+                Accounts.add(app, target)
+            }
+            val states = if (err == null) UsageRepo.refreshAll(app) else null
             main.post {
                 busy = false
                 if (isFinishing) return@post
@@ -587,10 +703,20 @@ class MainActivity : Activity() {
                     input.text.clear()
                     clearClipboardIfCode(code)
                     secure(false)
+                    if (isNew) {
+                        Accounts.setAdding(app, null)
+                        Accounts.setCurrent(app, target)
+                    }
                     RefreshWorker.schedule(app)
-                    ClawdWidget.updateAll(app, state!!)
+                    ClawdWidget.updateAll(app, states)
                     Toast.makeText(app, R.string.connected, Toast.LENGTH_SHORT).show()
                     build()
+                    // The second account is when names start to show: name both.
+                    if (isNew && Accounts.multi(app)) {
+                        val first = Accounts.list(app).first()
+                        if (Accounts.name(app, first).isEmpty() && first != target) askName(first, then = { askName(target) })
+                        else askName(target)
+                    }
                 } else say(errorText(err), Themes.CRIT)
             }
         }
@@ -602,22 +728,76 @@ class MainActivity : Activity() {
         say(getString(R.string.refreshing), theme.text)
         val app = applicationContext
         io.execute {
-            val state = UsageRepo.refresh(app)
-            ClawdWidget.updateAll(app, state)
+            val states = UsageRepo.refreshAll(app)
+            ClawdWidget.updateAll(app, states)
             main.post { busy = false; if (!isFinishing) build() }
         }
     }
 
-    private fun signOut() {
-        ClaudeAuth.signOut(this)
-        UsageRepo.clear(this)
-        History.clear(this)
+    private fun startAdding() {
+        val id = Accounts.freeId(this) ?: return
+        // Nothing left over from an earlier attempt with this id.
+        ClaudeAuth.signOut(this, id)
+        Accounts.setAdding(this, id)
+        build()
+        scroll?.post { scroll?.scrollTo(0, 0) }
+    }
+
+    private fun cancelAdding() {
+        Accounts.adding(this)?.let { ClaudeAuth.signOut(this, it) }
+        Accounts.setAdding(this, null)
+        secure(false)
+    }
+
+    /** Asks for a short name (Personal, Work...) for [id]; [then] runs after it is saved or skipped. */
+    private fun askName(id: String, then: (() -> Unit)? = null) {
+        val first = Accounts.list(this).firstOrNull() == id
+        val input = EditText(this).apply {
+            setText(Accounts.name(this@MainActivity, id))
+            post { setSelection(text.length) }
+            hint = getString(R.string.name_hint)
+            isSingleLine = true
+            filters = arrayOf(android.text.InputFilter.LengthFilter(Accounts.NAME_MAX))
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
+        }
+        val frame = FrameLayout(this).apply { setPadding(dp(20), dp(8), dp(20), 0); addView(input) }
+        android.app.AlertDialog.Builder(this)
+            .setTitle(if (first && then != null) R.string.name_first else R.string.name_title)
+            .setMessage(R.string.name_note)
+            .setView(frame)
+            .setPositiveButton(R.string.save) { _, _ ->
+                Accounts.setName(this, id, input.text.toString())
+                ClawdWidget.updateAll(applicationContext)
+                build()
+                then?.invoke()
+            }
+            .setNegativeButton(R.string.cancel) { _, _ -> then?.invoke() }
+            .show()
+    }
+
+    private fun confirmRemove(id: String) {
+        android.app.AlertDialog.Builder(this)
+            .setTitle(getString(R.string.remove_title, Accounts.label(this, id)))
+            .setMessage(R.string.remove_note)
+            .setPositiveButton(R.string.remove) { _, _ -> remove(id) }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    /** Signs [id] out and forgets everything Pinch kept for it on this phone. */
+    private fun remove(id: String) {
+        Accounts.keep(this)
+        ClaudeAuth.signOut(this, id)
+        UsageRepo.clear(this, id)
+        History.clear(this, id)
+        Settings.forgetLook(this, id)
+        Accounts.remove(this, id)
         ClawdWidget.updateAll(this)
         build()
     }
 
     private fun setTheme(id: String) {
-        Settings.setThemeChoice(this, id)
+        Settings.setThemeChoice(this, account, id)
         ClawdWidget.updateAll(this)
         build()
     }
@@ -670,6 +850,7 @@ class MainActivity : Activity() {
         "rate_limited" -> getString(R.string.err_rate)
         "offline" -> getString(R.string.err_offline)
         "format_changed" -> getString(R.string.err_format)
+        "duplicate" -> getString(R.string.err_duplicate)
         else -> getString(R.string.err_other, err ?: "?")
     }
 
@@ -732,4 +913,9 @@ class MainActivity : Activity() {
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
     private fun pxToDp(px: Int) = (px / resources.displayMetrics.density).toInt()
+
+    companion object {
+        /** Opens the app on this account's tab (from a widget's "sign in again"). */
+        const val EXTRA_ACCOUNT = "dev.pinch.app.extra.ACCOUNT"
+    }
 }

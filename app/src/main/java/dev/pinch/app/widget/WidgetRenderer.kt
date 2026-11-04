@@ -7,11 +7,15 @@ import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.os.Build
 import android.os.SystemClock
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import android.util.SizeF
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.widget.RemoteViews
+import dev.pinch.app.Accounts
 import dev.pinch.app.R
 import dev.pinch.app.Settings
 import dev.pinch.app.art.Clawd
@@ -52,9 +56,27 @@ object WidgetRenderer {
 
     class Look(val theme: Theme, val skin: Skin)
 
-    fun look(context: Context): Look {
-        val theme = Settings.theme(context)
-        return Look(theme, Settings.skin(context, theme))
+    fun look(context: Context, account: String): Look {
+        val theme = Settings.theme(context, account)
+        return Look(theme, Settings.skin(context, account, theme))
+    }
+
+    /**
+     * Which account a widget shows, among how many. With one account none of it shows and the
+     * widget looks as it always did.
+     * @param widgetId the widget, for its "next account" tap; -1 for the in-app preview.
+     * @param signedOut positions of accounts that need signing in again, for their dots.
+     */
+    class Page(val account: String, val name: String, val index: Int, val count: Int, val signedOut: Set<Int>, val widgetId: Int) {
+        val multi get() = count > 1
+
+        companion object {
+            fun of(context: Context, account: String, widgetId: Int): Page {
+                val ids = Accounts.list(context)
+                val out = ids.indices.filter { UsageRepo.cached(context, ids[it]).error == "auth_error" }.toSet()
+                return Page(account, Accounts.label(context, account), ids.indexOf(account).coerceAtLeast(0), ids.size, out, widgetId)
+            }
+        }
     }
 
     /**
@@ -98,19 +120,20 @@ object WidgetRenderer {
         widthDp: Int,
         heightDp: Int,
         act: List<Frame>? = null,
-        look: Look = look(context),
+        look: Look,
         /** False for the in-app preview, which has a fixed size and wants that one layout. */
         responsive: Boolean = true,
+        page: Page,
         /** The refresh arrow gives one quick turn: the answer to a tap on it. */
         nudge: Boolean = false
     ): RemoteViews {
         val art = art(context, state, signedIn, widthDp, act, look)
         if (responsive && Build.VERSION.SDK_INT >= 31) {
             return RemoteViews(VARIANTS.associate { k ->
-                SizeF(k.w.toFloat(), k.h.toFloat()) to one(context, state, signedIn, k, look, art, nudge)
+                SizeF(k.w.toFloat(), k.h.toFloat()) to one(context, state, signedIn, k, look, art, page, nudge)
             })
         }
-        return one(context, state, signedIn, pick(widthDp, heightDp), look, art, nudge)
+        return one(context, state, signedIn, pick(widthDp, heightDp), look, art, page, nudge)
     }
 
     private fun art(
@@ -138,7 +161,7 @@ object WidgetRenderer {
         // Drawing the loop is the slow part of a redraw. A refresh that changed only text (or
         // nothing) reuses the last loop, so its numbers show at once. One-shot acts are not kept.
         val key = "${theme.id}|${look.skin.id}|$stageW|$hour|$mood|$halves|$home|${dm.widthPixels}x${dm.heightPixels}"
-        if (act == null) lastArt?.let { (k, art) -> if (k == key) return art }
+        if (act == null) synchronized(lastArt) { lastArt[key] }?.let { return it }
         val beats = if (act != null) Stage.act(act, home, stageW) else Stage.loop(mood, halves ?: 6, home, stageW, look.skin.id)
         // The launcher caps a widget's bitmaps at about 1.5 screens of pixels: pick the
         // sharpest scale that keeps the loop inside 70% of that, else skip every other frame.
@@ -150,16 +173,20 @@ object WidgetRenderer {
         val frames = beats.indices.step(stride).map { t ->
             Stage.compose(bg, theme.scene, hour, t, beats.size, beats[t], look.skin).toBitmap(scale, Bitmap.Config.RGB_565)
         }
-        return Art(frames, (Stage.FRAME_MS * stride).toInt(), hearts).also { if (act == null) lastArt = key to it }
+        return Art(frames, (Stage.FRAME_MS * stride).toInt(), hearts).also { if (act == null) synchronized(lastArt) { lastArt[key] = it } }
     }
 
-    /** The last mood loop drawn, with what it was drawn from. */
-    @Volatile
-    private var lastArt: Pair<String, Art>? = null
+    /**
+     * The last mood loops drawn, by what they were drawn from: two, so two widgets on different
+     * accounts do not redraw each other's loop on every refresh. Loops are big; two is the cap.
+     */
+    private val lastArt = object : LinkedHashMap<String, Art>(4, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Art>?) = size > 2
+    }
 
     private fun one(
         context: Context, state: UsageRepo.State, signedIn: Boolean, k: Variant, look: Look, art: Art,
-        nudge: Boolean
+        page: Page, nudge: Boolean
     ): RemoteViews {
         val theme = look.theme
         val v = RemoteViews(
@@ -176,6 +203,10 @@ object WidgetRenderer {
         val session = usage?.session
         val week = usage?.weekly
         val authProblem = !signedIn || state.error == "auth_error"
+        // Signed out of Claude but with numbers from before: they stay, greyed, so the page
+        // still says something while it asks to sign in again.
+        val stale = signedIn && authProblem && usage != null
+        val numbers = !authProblem || stale
         // The week is used up: that, not the session, is what says whether Claude can be used.
         val blocked = !authProblem && usage?.weekMaxed == true
 
@@ -198,8 +229,9 @@ object WidgetRenderer {
             v.setColorStateList(R.id.refresh_nudge, "setIndeterminateTintList", ColorStateList.valueOf(theme.muted))
         }
 
-        // ---- header
+        // ---- header: with several accounts the account's name stands where "Claude usage" was
         v.setTextViewText(R.id.plan, usage?.plan?.takeIf { it.isNotEmpty() }?.let { "· $it" } ?: "")
+        if (page.multi) v.setTextViewText(R.id.title, page.name.uppercase())
 
         // ---- big number: the session used and what is left, or the week once it is used up
         when {
@@ -208,9 +240,13 @@ object WidgetRenderer {
                 v.setTextColor(R.id.pct, Themes.CRIT)
                 v.setTextViewText(R.id.left_text, context.getString(R.string.week_used_up))
             }
-            session != null && !authProblem -> {
+            session != null && numbers -> {
                 v.setTextViewText(R.id.pct, "${session.percent}%")
-                v.setTextColor(R.id.pct, if (session.percent >= 85) levelColor(session.percent) else theme.textHi)
+                v.setTextColor(R.id.pct, when {
+                    stale -> theme.muted
+                    session.percent >= 85 -> levelColor(session.percent)
+                    else -> theme.textHi
+                })
                 v.setTextViewText(R.id.left_text, context.getString(R.string.pct_left, (100 - session.percent).coerceAtLeast(0)))
             }
             else -> {
@@ -235,14 +271,14 @@ object WidgetRenderer {
         }
 
         // ---- session bar and its reset countdown
-        bar(v, "session", if (blocked) 100 else session?.percent, authProblem)
+        bar(v, "session", if (blocked) 100 else session?.percent, !numbers, grey = stale)
         v.setViewVisibility(R.id.session_reset, View.GONE)
         v.setViewVisibility(R.id.session_note, View.VISIBLE)
         fun say(long: Int, short: Int, color: Int, vararg args: Any) =
             note(v, context.getString(if (small) short else long, *args), color)
         when {
             !signedIn -> say(R.string.tap_to_sign_in, R.string.tap_to_sign_in_short, Themes.WARN)
-            state.error == "auth_error" -> say(R.string.sign_in_again, R.string.sign_in_again_short, Themes.CRIT)
+            state.error == "auth_error" -> say(R.string.sign_in_again, R.string.sign_in_again_short, if (page.multi) Themes.WARN else Themes.CRIT)
             state.error == "format_changed" -> say(R.string.api_changed, R.string.api_changed_short, Themes.WARN)
             session == null && week == null -> say(
                 if (state.error != null) R.string.no_data_offline else R.string.loading,
@@ -266,22 +302,24 @@ object WidgetRenderer {
         }
 
         // ---- week
-        if (week != null && !authProblem) {
+        if (week != null && numbers) {
             v.setTextViewText(R.id.week_pct, "${week.percent}%")
-            if (week.percent >= 85) v.setTextColor(R.id.week_pct, levelColor(week.percent))
+            if (stale) v.setTextColor(R.id.week_pct, theme.muted)
+            else if (week.percent >= 85) v.setTextColor(R.id.week_pct, levelColor(week.percent))
             v.setTextViewText(R.id.week_reset, resetText(context, week))
         } else {
             v.setTextViewText(R.id.week_pct, "")
             v.setTextViewText(R.id.week_reset, context.getString(R.string.no_data))
         }
-        bar(v, "week", week?.percent, authProblem)
+        bar(v, "week", week?.percent, !numbers, grey = stale)
 
         // ---- the model used most this week
         val top = usage?.topModel
         v.setTextViewText(
             R.id.model_value,
-            if (top != null && !authProblem) "${top.label} · ${top.percent}%" else context.getString(R.string.no_data)
+            if (top != null && numbers) "${top.label} · ${top.percent}%" else context.getString(R.string.no_data)
         )
+        if (stale) v.setTextColor(R.id.model_value, theme.muted)
 
         // ---- footer
         val status = state.status
@@ -297,7 +335,12 @@ object WidgetRenderer {
 
         // ---- fit the space: rows drop away as it shrinks; the percent and reset time never do
         fun show(id: Int, on: Boolean) = v.setViewVisibility(id, if (on) View.VISIBLE else View.GONE)
-        val hasWeek = week != null && !authProblem
+        val hasWeek = week != null && numbers
+        val headerShown = when (k.kind) {
+            Kind.MINI, Kind.STRIP -> false
+            Kind.NARROW -> k.h >= 200
+            Kind.WIDE -> k.h >= 130
+        }
         when (k.kind) {
             Kind.MINI -> {
                 show(R.id.header, false)
@@ -330,14 +373,39 @@ object WidgetRenderer {
                 show(R.id.footer, k.h >= 225 && status != null)
             }
         }
-        v.setContentDescription(R.id.content, spoken(context, state, signedIn))
+
+        // ---- several accounts: the name, the dots, or at the smallest sizes the account's letter
+        show(R.id.dots, page.multi && k.kind == Kind.WIDE && headerShown)
+        show(R.id.badge, page.multi && !headerShown && k.kind != Kind.STRIP)
+        if (page.multi) {
+            v.setTextViewText(R.id.dots, dots(page, theme))
+            v.setTextViewText(R.id.badge, page.name.take(1).uppercase())
+            v.setTextColor(R.id.badge, if (page.index in page.signedOut) Themes.WARN else theme.text)
+            // One row tall: the name takes the place of "58% left".
+            if (k.kind == Kind.STRIP) {
+                v.setTextViewText(R.id.left_text, page.name.uppercase())
+                v.setTextColor(R.id.left_text, theme.muted.brighter())
+            }
+        }
+        v.setContentDescription(
+            R.id.content,
+            spoken(context, state, signedIn).let { if (page.multi) "${page.name}. $it" else it }
+        )
 
         // ---- taps
         val open = PendingIntent.getActivity(
-            context, 0, Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            context, page.account.hashCode(),
+            Intent(context, MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .putExtra(MainActivity.EXTRA_ACCOUNT, page.account),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         v.setOnClickPendingIntent(R.id.content, open)
+        if (page.multi && page.widgetId >= 0) {
+            val next = WidgetActions.next(context, page.widgetId)
+            for (id in intArrayOf(R.id.title, R.id.plan, R.id.dots, R.id.badge)) v.setOnClickPendingIntent(id, next)
+            if (k.kind == Kind.STRIP) v.setOnClickPendingIntent(R.id.left_text, next)
+        }
         v.setOnClickPendingIntent(R.id.refresh, WidgetActions.pending(context, WidgetActions.ACTION_REFRESH))
         if (k.kind == Kind.WIDE) v.setOnClickPendingIntent(
             R.id.stage,
@@ -388,14 +456,35 @@ object WidgetRenderer {
         v.setTextColor(R.id.session_note, color)
     }
 
-    private fun bar(v: RemoteViews, name: String, pct: Int?, off: Boolean) {
+    /** One dot per account, the shown one lit; one that needs signing in again is yellow. */
+    private fun dots(page: Page, theme: Theme): CharSequence {
+        val s = SpannableStringBuilder()
+        for (i in 0 until page.count) {
+            if (i > 0) s.append(' ')
+            val color = when {
+                i in page.signedOut -> if (i == page.index) Themes.WARN else Pix.withAlpha(Themes.WARN, 0.6f)
+                i == page.index -> theme.textHi
+                else -> Pix.withAlpha(theme.muted, 0.45f)
+            }
+            val start = s.length
+            s.append('●')
+            s.setSpan(ForegroundColorSpan(color), start, s.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        return s
+    }
+
+    /** @param grey the old numbers of a signed-out account: shown, but in grey. */
+    private fun bar(v: RemoteViews, name: String, pct: Int?, off: Boolean, grey: Boolean = false) {
         val ids = barIds(name)
         val level = if (pct == null || off) null else Level.of(pct)
-        val shown = when (level) {
-            null, Level.OK -> 0
-            Level.WARN -> 1
-            // A used-up limit is red, the loudest level: a grey full bar read as an empty one.
-            Level.CRIT, Level.DEAD -> 2
+        val shown = when {
+            grey && level != null -> 3
+            else -> when (level) {
+                null, Level.OK -> 0
+                Level.WARN -> 1
+                // A used-up limit is red, the loudest level: a grey full bar read as an empty one.
+                Level.CRIT, Level.DEAD -> 2
+            }
         }
         ids.forEachIndexed { i, id ->
             v.setViewVisibility(id, if (i == shown) View.VISIBLE else View.GONE)
