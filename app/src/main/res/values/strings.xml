@@ -128,19 +128,19 @@
     <string name="err_other">Something went wrong (%s). Try again.</string>
     <!-- Alerts -->
     <string name="alerts">Alerts</string>
-    <string name="alerts_warn">At 80% and 95%</string>
+    <string name="alerts_warn" formatted="false">At 80% and 95%</string>
     <string name="alerts_reset">When the session resets</string>
-    <string name="alerts_note">A notification when your session or week passes 80% and again at 95%, and when a new 5-hour session starts. Each one comes once per window.</string>
+    <string name="alerts_note" formatted="false">A notification when your session or week passes 80% and again at 95%, and when a new 5-hour session starts. Each one comes once per window.</string>
     <string name="alerts_permission">Android needs your OK before Pinch can show notifications.</string>
     <string name="alerts_allow">Allow notifications</string>
     <string name="alert_channel">Usage alerts</string>
-    <string name="alert_channel_note">Warnings at 80% and 95%, and when your session resets.</string>
+    <string name="alert_channel_note" formatted="false">Warnings at 80% and 95%, and when your session resets.</string>
     <string name="alert_session_title">Session at %1$d%%</string>
     <string name="alert_session_body">%1$d%% of your 5-hour session is used. It resets at %2$s.</string>
     <string name="alert_week_title">Week at %1$d%%</string>
     <string name="alert_week_body">%1$d%% of your weekly limit is used. It resets %2$s.</string>
     <string name="alert_reset_title">New session</string>
-    <string name="alert_reset_body">Your 5-hour session just reset. You are back to 0%.</string>
+    <string name="alert_reset_body" formatted="false">Your 5-hour session just reset. You are back to 0%.</string>
     <!-- Updates -->
     <string name="update_title">Pinch %1$s is out</string>
     <string name="update_note">You have %1$s. Download the new version from GitHub and install it over this one; your sign-in and settings stay.</string>
