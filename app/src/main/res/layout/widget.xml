@@ -94,12 +94,26 @@
                 android:visibility="gone" />
         </LinearLayout>
 
-        <!-- Big number + the stage Clawd walks on -->
-        <LinearLayout
+        <!-- The stage Clawd walks on spans the whole width; the big number sits over its left end. -->
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="60dp"
-            android:layout_marginTop="4dp"
-            android:orientation="horizontal">
+            android:layout_marginTop="4dp">
+
+            <FrameLayout
+                android:id="@+id/stage"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@string/clawd">
+
+                <!-- The whole stage, one composed frame per child, flipped by the launcher. -->
+                <ViewFlipper
+                    android:id="@+id/stage_anim"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:autoStart="true"
+                    android:flipInterval="100" />
+            </FrameLayout>
 
             <LinearLayout
                 android:id="@+id/left"
@@ -118,7 +132,11 @@
                     android:includeFontPadding="false"
                     android:text="@string/dash_pct"
                     android:textColor="#FFF4F4F5"
-                    android:textSize="28sp" />
+                    android:textSize="28sp"
+                    android:shadowColor="#CC000000"
+                    android:shadowDx="0"
+                    android:shadowDy="1"
+                    android:shadowRadius="3" />
 
                 <TextView
                     android:id="@+id/left_text"
@@ -126,7 +144,11 @@
                     android:layout_height="wrap_content"
                     android:singleLine="true"
                     android:textColor="#FF8B8B94"
-                    android:textSize="11sp" />
+                    android:textSize="11sp"
+                    android:shadowColor="#CC000000"
+                    android:shadowDx="0"
+                    android:shadowDy="1"
+                    android:shadowRadius="3" />
 
                 <ViewFlipper
                     android:id="@+id/hearts"
@@ -137,22 +159,7 @@
                     android:flipInterval="160" />
             </LinearLayout>
 
-            <FrameLayout
-                android:id="@+id/stage"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:contentDescription="@string/clawd">
-
-                <!-- The whole stage, one composed frame per child, flipped by the launcher. -->
-                <ViewFlipper
-                    android:id="@+id/stage_anim"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:autoStart="true"
-                    android:flipInterval="100" />
-            </FrameLayout>
-        </LinearLayout>
+        </FrameLayout>
 
         <!-- Session bar -->
         <include layout="@layout/widget_bar_session" />

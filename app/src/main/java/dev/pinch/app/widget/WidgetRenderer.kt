@@ -152,11 +152,12 @@ object WidgetRenderer {
         }
 
         // The stage: one seamless loop of composed frames (scene + moving things + crab).
-        val stageDp = (widthDp - SIDE_PADDING_DP - LEFT_COLUMN_DP).coerceAtLeast(80)
+        // The stage spans the full width, under the big number too, so Clawd can roam all of it.
+        val stageDp = (widthDp - SIDE_PADDING_DP).coerceAtLeast(80 + LEFT_COLUMN_DP)
         val stageW = stageDp / DP_PER_PX
         val hour = LocalDateTime.now().hour
         val mood = moodOf(state, signedIn)
-        val home = Stage.home(stageW, if (authProblem) null else session?.percent)
+        val home = Stage.home(stageW, if (authProblem) null else session?.percent, from = LEFT_COLUMN_DP / DP_PER_PX)
         val dm = context.resources.displayMetrics
         // Drawing the loop is the slow part of a redraw. A refresh that changed only text (or
         // nothing) reuses the last loop, so its numbers show at once. One-shot acts are not kept.
