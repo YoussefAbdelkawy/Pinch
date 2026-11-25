@@ -64,26 +64,33 @@
 
             <ImageView
                 android:id="@+id/refresh"
-                android:layout_width="28dp"
-                android:layout_height="22dp"
+                android:layout_width="40dp"
+                android:layout_height="32dp"
+                android:layout_marginTop="-5dp"
+                android:layout_marginBottom="-5dp"
+                android:layout_marginEnd="-4dp"
                 android:contentDescription="@string/refresh"
-                android:paddingStart="8dp"
-                android:paddingTop="2dp"
-                android:paddingBottom="2dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="4dp"
+                android:paddingTop="7dp"
+                android:paddingBottom="7dp"
                 android:src="@drawable/ic_refresh" />
 
             <!-- Shown for a tap: the arrow gives one quick turn. Square content so it turns round. -->
             <ProgressBar
                 android:id="@+id/refresh_nudge"
-                android:layout_width="28dp"
-                android:layout_height="22dp"
+                android:layout_width="40dp"
+                android:layout_height="32dp"
+                android:layout_marginTop="-5dp"
+                android:layout_marginBottom="-5dp"
+                android:layout_marginEnd="-4dp"
                 android:indeterminate="true"
                 android:indeterminateDrawable="@drawable/refresh_nudge"
                 android:indeterminateTint="#FF8B8B94"
-                android:paddingStart="9dp"
-                android:paddingEnd="1dp"
-                android:paddingTop="2dp"
-                android:paddingBottom="2dp"
+                android:paddingStart="17dp"
+                android:paddingEnd="5dp"
+                android:paddingTop="7dp"
+                android:paddingBottom="7dp"
                 android:visibility="gone" />
         </LinearLayout>
 
@@ -119,7 +126,7 @@
                     android:layout_height="wrap_content"
                     android:singleLine="true"
                     android:textColor="#FF8B8B94"
-                    android:textSize="10sp" />
+                    android:textSize="11sp" />
 
                 <ViewFlipper
                     android:id="@+id/hearts"
@@ -282,7 +289,7 @@
                 android:paddingStart="6dp"
                 android:singleLine="true"
                 android:textColor="#FF6B7280"
-                android:textSize="10sp" />
+                android:textSize="11sp" />
         </LinearLayout>
     </LinearLayout>
     <!-- With several accounts, at sizes with no room for the name: the account's letter. Tap: next account. -->

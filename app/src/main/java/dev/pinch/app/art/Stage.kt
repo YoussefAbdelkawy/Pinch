@@ -105,7 +105,7 @@ object Stage {
         return b.out.take(n)
     }
 
-    /** The skin's own routine: cooking, typing, spell-casting, investigating. Ends where it began. */
+    /** The skin's own routine: cooking, typing, spell-casting, investigating, bug hunting. Ends where it began. */
     private fun routine(b: Builder, skinId: String, tired: Boolean, w: Int, n: Int) {
         val sweat = { t: Int -> if (tired) 1 + (t / 2) % 3 else 0 }
         val eyes = { e: String -> if (tired && e == "open") "focus" else e }
@@ -160,6 +160,43 @@ object Stage {
                 cast()
                 b.walk(-dir * d, every = 1) { t -> Frame(sweat = sweat(t)) }
                 b.fill(n) { t -> Frame(eyes = if (t % 13 == 6) "blink" else eyes("open"), sweat = sweat(t)) }
+            }
+            "bughunter" -> {
+                // Three red butterflies, one at a time: he tracks it in, crouches, jumps and sweeps it
+                // into the net at the top of the jump, lands, shows the count, and trots on with his catch.
+                // After the third he celebrates and lets them all go.
+                val dir = b.roomyDir(w)
+                val d = min(12, b.room(w, dir))
+                val jump = intArrayOf(3, 6, 8, 9, 8, 6, 3)
+                var caught = 0
+                fun catchOne(move: Int) {
+                    val held = caught * 100
+                    for (k in 1..10) b.hold(1, Frame(eyes = if (k in 5..6) "wide" else eyes("open"), look = 1, prop = held + k, sweat = sweat(k)))
+                    b.hold(1, Frame(off = 1, poof = "dot", eyes = "focus", look = 1, prop = held + 11))
+                    for ((i, lift) in jump.withIndex()) {
+                        val now = when {
+                            i < 3 -> held + 12 + i
+                            i == 3 -> held + Props.BUG_SWING
+                            else -> held + 100
+                        }
+                        b.hold(1, Frame(arms = "up", lift = lift, eyes = if (i == 3) "wide" else "focus", look = 1, prop = now))
+                    }
+                    caught++
+                    val net = caught * 100
+                    b.hold(1, Frame(off = 1, poof = "wave", eyes = "happy", prop = net))
+                    for (k in 0 until 6) {
+                        b.hold(1, Frame(eyes = "happy", arms = if ((k / 2) % 2 == 0) "up" else "down",
+                            lift = if (k in 1..2) 2 else 0, prop = net + Props.BUG_COUNT))
+                    }
+                    if (move != 0) b.walk(move, every = 1) { t -> Frame(prop = net, sweat = sweat(t)) }
+                }
+                catchOne(dir * d)
+                catchOne(-dir * d)
+                catchOne(0)
+                val hop = intArrayOf(0, 2, 4, 4, 2, 0, 2, 0)
+                for (k in hop.indices) b.hold(1, Frame(eyes = "happy", arms = "up", lift = hop[k], confetti = k, prop = 300))
+                for (k in 1..10) b.hold(1, Frame(eyes = "happy", look = 1, arms = if (k < 4) "up" else "down", prop = Props.BUG_RELEASE + k))
+                b.fill(n) { t -> Frame(eyes = if (t % 13 == 6) "blink" else eyes("open"), look = 1, sweat = sweat(t)) }
             }
             "detective" -> {
                 // Paces slowly, studies the ground, then holds the glass up to his eye.

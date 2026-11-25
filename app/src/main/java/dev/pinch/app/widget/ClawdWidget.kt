@@ -33,11 +33,29 @@ class ClawdWidget : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
         RefreshWorker.schedule(context)
-        for (id in ids) render(context, manager, id, null, null)
+        inBackground(context) { for (id in ids) updateAll(it, only = id) }
     }
 
     override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, id: Int, newOptions: Bundle) {
-        render(context, manager, id, null, null)
+        inBackground(context) { updateAll(it, only = id) }
+    }
+
+    /**
+     * Drawing the stage is a few hundred milliseconds to seconds of bitmap work: off the main
+     * thread, where it held up the app (and, after a reboot or a resize, risked an ANR). Goes
+     * through [updateAll]'s lock so it cannot paint over a newer redraw.
+     */
+    private fun inBackground(context: Context, block: (Context) -> Unit) {
+        val app = context.applicationContext
+        val pending = goAsync()
+        Thread {
+            try {
+                block(app)
+            } catch (_: Exception) {
+            } finally {
+                pending.finish()
+            }
+        }.start()
     }
 
     companion object {

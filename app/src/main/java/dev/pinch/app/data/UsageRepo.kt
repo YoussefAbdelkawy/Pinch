@@ -3,6 +3,7 @@ package dev.pinch.app.data
 import android.content.Context
 import android.content.SharedPreferences
 import dev.pinch.app.Accounts
+import dev.pinch.app.Alerts
 import dev.pinch.app.Settings
 import dev.pinch.app.auth.ClaudeAuth
 import org.json.JSONObject
@@ -67,8 +68,14 @@ object UsageRepo {
     /**
      * Fetches every account side by side, and the status page once, so switching accounts on
      * the widget always shows numbers as fresh as the last refresh.
+     * @param waitMs how long to wait for the numbers before calling an account "offline" (its
+     *   fetch goes on in the background and still saves what it gets).
      */
-    fun refreshAll(context: Context, accounts: List<String> = Accounts.list(context)): Map<String, State> {
+    fun refreshAll(
+        context: Context,
+        accounts: List<String> = Accounts.list(context),
+        waitMs: Long = USAGE_WAIT_MS
+    ): Map<String, State> {
         if (Settings.demo(context)) return accounts.associateWith { cached(context, it) }
         val before = status(context)
         // The status page must not hold up the numbers: a slow one is given up on after a few
@@ -77,7 +84,7 @@ object UsageRepo {
         val tasks = accounts.associateWith { a -> FutureTask { refreshOne(context, a) }.also { Thread(it).start() } }
         val results = tasks.mapValues { (a, t) ->
             try {
-                t.get(USAGE_WAIT_MS, TimeUnit.MILLISECONDS)
+                t.get(waitMs, TimeUnit.MILLISECONDS)
             } catch (_: Exception) {
                 raw(context, a).let { it.copy(usage = it.usage?.settled(), error = "offline") }
             }
@@ -105,6 +112,11 @@ object UsageRepo {
         val usage = result.first!!
         p.putString("usage", usage.toJson()).remove("error").apply()
         History.record(context, account, usage)
+        try {
+            Alerts.check(context, account, usage.settled(), reset(before.usage?.session, usage.session))
+        } catch (_: Exception) {
+            // A notification that fails must never cost the numbers.
+        }
 
         // Same rule as Clawd: the reset time moved forward and the percent dropped. The week
         // resetting counts too: after a maxed-out week that is the bigger relief.

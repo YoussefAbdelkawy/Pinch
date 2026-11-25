@@ -46,11 +46,12 @@ To uninstall, remove the widget from your home screen first, then uninstall the 
 You can change these in the app:
 
 - **Theme.** "By season" is the default. It picks Halloween in October, Christmas in December, Valentine in February, Spring from March 20 to May, Summer from June to August, and Classic the rest of the year. You can also pick a theme yourself.
-- **Crab skin.** "Theme's pick" dresses the crab for the theme, for example a witch hat at Halloween. There are 31 skins. Four of them come with their own animation:
+- **Crab skin.** "Theme's pick" dresses the crab for the theme, for example a witch hat at Halloween. There are 32 skins. Five of them come with their own animation:
   - **Chef:** watches the pan, then tosses the pancake so it flips in the air, and catches it.
   - **Programmer:** sits on the ground with headphones on, typing on his laptop.
   - **Wizard:** waves his wand in an arc that leaves sparks, then casts a burst of stars.
   - **Detective:** smokes a pipe, studies the ground with his magnifying glass, then holds it up to his eye.
+  - **Bug hunter:** red butterflies flutter in one at a time. He crouches, jumps and sweeps each one into his net, shows the count, and after the third lets them all go. He is the Terminal theme's pick.
 - **Refresh every.** Choose 5, 15, 30 or 60 minutes. The 5-minute option only runs while your phone is awake, so it does not drain the battery. Android may stretch it by a few minutes.
 
 To refresh right away, tap the refresh button on the widget. Tap the crab to see a trick.
@@ -92,7 +93,7 @@ He also moves along the scene as your session fills up, so his position shows yo
 ## Privacy and security
 
 - **Your password never goes into Pinch.** You only type it on claude.com, in your own browser.
-- **Pinch only talks to Anthropic.** It connects to `api.anthropic.com` for your usage, `platform.claude.com` for sign-in, and `status.claude.com` for the public status page. It has no server of its own, no ads and no tracking.
+- **Pinch only talks to Anthropic.** It connects to `api.anthropic.com` for your usage, `platform.claude.com` for sign-in, `status.claude.com` for the public status page, and `api.github.com` once a day to see whether a newer Pinch is out (you can turn that off; nothing about you is sent). It has no server of its own, no ads and no tracking.
 - **Your sign-in is encrypted on your phone.** The key is stored in the Android Keystore, and the token is never logged or backed up. **Sign out** (or **Remove**, with several accounts) deletes it, with that account's numbers and history.
 - **The sign-in steps are protected.** The sign-in page opens in your own browser. The code is hidden from screenshots and other apps. The clipboard is cleared after you connect.
 - **It asks for very few permissions:** internet access and network state.

@@ -21,7 +21,7 @@ object Props {
     fun sedentary(skinId: String) = skinId == "programmer" || skinId == "chef"
 
     /** Skins with a routine of their own in [Stage]. */
-    fun hasRoutine(skinId: String) = skinId in setOf("chef", "programmer", "wizard", "detective")
+    fun hasRoutine(skinId: String) = skinId in setOf("chef", "programmer", "wizard", "detective", "bughunter")
 
     /**
      * @param y the crab's grid top as drawn (lowered when he crouches or sits)
@@ -33,6 +33,7 @@ object Props {
             "programmer" -> programmer(p, f, t, x, rest)
             "wizard" -> wizard(p, f, t, x, y)
             "detective" -> detective(p, f, t, x, y)
+            "bughunter" -> bugHunter(p, f, t, x, y, rest)
         }
     }
 
@@ -224,6 +225,76 @@ object Props {
                 p.set(x + 18, y + 6, LENS_HANDLE)
                 p.set(x + 19, y + 5, LENS_HANDLE)
                 lens(p, x + 19, y + 1, t)
+            }
+        }
+    }
+
+    // -------------------------------------------------------------- bug hunter ----
+
+    /*
+     * [Frame.prop] for the bug hunter: hundreds = butterflies already in the net, the rest is
+     * what is happening now. 1..14: a butterfly flutters in (14 is right above him);
+     * BUG_SWING: the net sweeps it in; BUG_COUNT: he shows the count; BUG_RELEASE + k: he lets
+     * them all go, k frames ago.
+     */
+    const val BUG_APPROACH = 14
+    const val BUG_SWING = 30
+    const val BUG_COUNT = 32
+    const val BUG_RELEASE = 50
+
+    private val NET_RIM = c("#D8D2CA")
+    private val NET_MESH = c("#6E6862")
+    private val NET_HANDLE = c("#8A6E52")
+    private val FLY_RED = c("#F25C54")
+    private val FLY_DARK = c("#B8322B")
+    private val FLY_BODY = c("#2A1A1A")
+    private val COUNT = c("#FDE047")
+    private val FLY_OPEN = listOf("rr.rr", "dkkkd", ".r.r.")
+    private val FLY_SHUT = listOf(".r.r.", ".dkd.", "..k..")
+    private val DIGITS = listOf(
+        listOf(".q.", "qq.", ".q.", ".q.", "qqq"),
+        listOf("qq.", "..q", ".q.", "q..", "qqq"),
+        listOf("qq.", "..q", ".q.", "..q", "qq.")
+    )
+
+    private fun butterfly(p: Pix, x: Int, y: Int, t: Int) =
+        p.art(if (t % 2 == 0) FLY_OPEN else FLY_SHUT, mapOf('r' to FLY_RED, 'd' to FLY_DARK, 'k' to FLY_BODY), x - 2, y - 1)
+
+    /** A butterfly net held upright, the caught ones fluttering inside; red butterflies to catch. */
+    private fun bugHunter(p: Pix, f: Frame, t: Int, x: Int, y: Int, rest: Int) {
+        val now = f.prop % 100
+        val inNet = f.prop / 100 + if (now == BUG_SWING) 1 else 0
+        val up = f.arms == "up"
+        val hx = x + 17
+        val hy = y + if (up) 2 else 4
+        // The sweep tips the hoop forward and down.
+        val sx = if (now == BUG_SWING) 2 else 0
+        val sy = if (now == BUG_SWING) 2 else 0
+        for (k in 1..3) p.set(hx + 1 + (if (sx > 0 && k == 3) 1 else 0), hy - k, NET_HANDLE)
+        val rim = mapOf('w' to NET_RIM, 'm' to NET_MESH)
+        p.art(listOf(".wwww.", "wm.m.w", "w.m.mw", ".wwww."), rim, hx - 1 + sx, hy - 7 + sy)
+        for (i in 0 until inNet.coerceAtMost(3)) {
+            val bx = hx + i + sx
+            val by = hy - 6 + sy + ((t + i) / 2) % 2
+            p.set(bx, by, if ((t + i) % 2 == 0) FLY_RED else FLY_DARK)
+        }
+        when {
+            now in 1..BUG_APPROACH -> {
+                // Flutters in from ahead and above on a wobbling path, to just over the net at the top of his jump.
+                val u = now / (BUG_APPROACH + 1.0)
+                val bx = (x + 19 + (1 - u) * 30 + sin(now * 1.3) * 2 * (1 - u)).roundToInt()
+                val by = (rest - 13 - (1 - u) * 3 + sin(now * 0.9) * 3 * (1 - u)).roundToInt()
+                butterfly(p, bx, by, t)
+            }
+            now == BUG_COUNT && inNet in 1..3 -> p.art(DIGITS[inNet - 1], mapOf('q' to COUNT), x + 7, y - 8)
+            now > BUG_RELEASE -> {
+                // Let go: three butterflies spiral up and away from the net.
+                val k = now - BUG_RELEASE
+                for (i in 0..2) {
+                    val bx = (hx + 1 + k * (0.8 + i * 0.5) + cos(k * 0.7 + i * 2.0) * 2).roundToInt()
+                    val by = (hy - 6 - k * (1.4 + i * 0.4)).roundToInt()
+                    butterfly(p, bx, by, t + i)
+                }
             }
         }
     }

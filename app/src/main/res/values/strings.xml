@@ -126,4 +126,32 @@
     <string name="name_note">A short name for the widget and the tabs. It stays on this phone.</string>
     <string name="name_hint">Personal, Work…</string>
     <string name="err_other">Something went wrong (%s). Try again.</string>
+    <!-- Alerts -->
+    <string name="alerts">Alerts</string>
+    <string name="alerts_warn" formatted="false">At 80% and 95%</string>
+    <string name="alerts_reset">When the session resets</string>
+    <string name="alerts_note" formatted="false">A notification when your session or week passes 80% and again at 95%, and when a new 5-hour session starts. Each one comes once per window.</string>
+    <string name="alerts_permission">Android needs your OK before Pinch can show notifications.</string>
+    <string name="alerts_allow">Allow notifications</string>
+    <string name="alert_channel">Usage alerts</string>
+    <string name="alert_channel_note" formatted="false">Warnings at 80% and 95%, and when your session resets.</string>
+    <string name="alert_session_title">Session at %1$d%%</string>
+    <string name="alert_session_body">%1$d%% of your 5-hour session is used. It resets at %2$s.</string>
+    <string name="alert_week_title">Week at %1$d%%</string>
+    <string name="alert_week_body">%1$d%% of your weekly limit is used. It resets %2$s.</string>
+    <string name="alert_reset_title">New session</string>
+    <string name="alert_reset_body" formatted="false">Your 5-hour session just reset. You are back to 0%.</string>
+    <!-- Updates -->
+    <string name="update_title">Pinch %1$s is out</string>
+    <string name="update_note">You have %1$s. Download the new version from GitHub and install it over this one; your sign-in and settings stay.</string>
+    <string name="update_get">Get it</string>
+    <string name="update_later">Not now</string>
+    <string name="updates_check">Check for new versions</string>
+    <string name="updates_note">Once a day, Pinch asks GitHub for its latest release. Nothing about you is sent.</string>
+    <string name="tab_usage">Usage</string>
+    <string name="tab_look">Look</string>
+    <string name="tab_settings">Settings</string>
+    <string name="skins_animated">With their own animation</string>
+    <string name="skins_other">More skins</string>
+    <string name="hearts_hint">The hearts on the widget show what is left of this session. Each heart is a third.</string>
 </resources>

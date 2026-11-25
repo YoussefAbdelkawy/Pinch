@@ -51,6 +51,10 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
             // Otherwise the tap already showed its answer (an error line); retrying would only spin quietly.
             return Result.success()
         }
+        // A one-off job does not retry: under KEEP, a job waiting out its backoff (which grows to
+        // hours) swallowed every later refreshNow(), so the 5-minute alarm and the reset alarm
+        // fetched nothing until it ran. The next alarm or the periodic job tries again anyway.
+        if (inputData.getBoolean(KEY_ONE_OFF, false)) return Result.success()
         // A signed-out account is not fixed by trying again; anything else may be.
         return if (errors.all { it == "auth_error" }) Result.success() else Result.retry()
     }
@@ -60,6 +64,7 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         private const val NOW = "clawd_refresh_now"
         private const val TAP = "clawd_refresh_tap"
         private const val KEY_TAP = "tap"
+        private const val KEY_ONE_OFF = "one_off"
 
         private val network = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
@@ -88,6 +93,7 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
          */
         fun refreshNow(context: Context, delayMs: Long = 0) {
             val work = OneTimeWorkRequestBuilder<RefreshWorker>()
+                .setInputData(workDataOf(KEY_ONE_OFF to true))
                 .setConstraints(network)
                 .setInitialDelay(delayMs, TimeUnit.MILLISECONDS)
                 .build()

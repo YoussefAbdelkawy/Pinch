@@ -42,6 +42,7 @@ object Themes {
         theme("summer", "Summer", "#0B1E2B", "#12304A", "#F0F9FF", "#E0F2FE", "#86A9BF", "#456679", "#FBBF24", "summer", "shades", "pat_summer"),
         theme("space", "Space", "#0E0820", "#1C1436", "#F5F3FF", "#E9E5F8", "#9A90BE", "#544A78", "#A78BFA", "space", "astronaut", "pat_space"),
         theme("ocean", "Underwater", "#0A2236", "#0F3149", "#F0F9FF", "#E0F2FE", "#86A9BF", "#456679", "#22D3EE", "ocean", "squarepants", "pat_ocean"),
+        theme("terminal", "Terminal", "#121110", "#1C1A18", "#F5EFE8", "#E2DAD2", "#8E857C", "#4A4541", "#E07B53", "terminal", "bughunter"),
         theme("cyberpunk", "Cyberpunk", "#0C0B16", "#17152A", "#F2FBFF", "#E3EEF5", "#8494A8", "#474F66", "#00E5FF", "cyberpunk", "netrunner", "pat_cyberpunk")
     )
 

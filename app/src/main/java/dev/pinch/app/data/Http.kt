@@ -13,7 +13,8 @@ object Http {
     private val ALLOWED_HOSTS = setOf(
         "api.anthropic.com",       // usage numbers
         "platform.claude.com",     // OAuth token exchange / refresh
-        "status.claude.com"        // public service status (no credentials sent)
+        "status.claude.com",       // public service status (no credentials sent)
+        "api.github.com"           // is a newer Pinch out? (public, no credentials sent)
     )
     private const val MAX_BODY = 256 * 1024
     private const val USER_AGENT = "ClawdUsageAndroid/1"

@@ -49,6 +49,18 @@ object Settings {
     fun demo(context: Context): Boolean = BuildConfig.DEBUG && prefs(context).getBoolean("demo", false)
     fun setDemo(context: Context, on: Boolean) = prefs(context).edit().putBoolean("demo", on).apply()
 
+    /** Warn at 80% and 95% of the session or the week. */
+    fun alertsWarn(context: Context): Boolean = prefs(context).getBoolean("alerts_warn", true)
+    fun setAlertsWarn(context: Context, on: Boolean) = prefs(context).edit().putBoolean("alerts_warn", on).apply()
+
+    /** Say when the 5-hour session resets. */
+    fun alertsReset(context: Context): Boolean = prefs(context).getBoolean("alerts_reset", true)
+    fun setAlertsReset(context: Context, on: Boolean) = prefs(context).edit().putBoolean("alerts_reset", on).apply()
+
+    /** Ask GitHub once a day whether a newer Pinch is out. */
+    fun checkUpdates(context: Context): Boolean = prefs(context).getBoolean("check_updates", true)
+    fun setCheckUpdates(context: Context, on: Boolean) = prefs(context).edit().putBoolean("check_updates", on).apply()
+
     /** Minutes between background refreshes; WorkManager's floor is 15. */
     fun intervalMinutes(context: Context): Int = prefs(context).getInt("interval", 15)
     fun setIntervalMinutes(context: Context, minutes: Int) = prefs(context).edit().putInt("interval", minutes).apply()
