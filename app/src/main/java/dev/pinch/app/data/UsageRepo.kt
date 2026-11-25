@@ -3,6 +3,7 @@ package dev.pinch.app.data
 import android.content.Context
 import android.content.SharedPreferences
 import dev.pinch.app.Accounts
+import dev.pinch.app.Alerts
 import dev.pinch.app.Settings
 import dev.pinch.app.auth.ClaudeAuth
 import org.json.JSONObject
@@ -111,6 +112,11 @@ object UsageRepo {
         val usage = result.first!!
         p.putString("usage", usage.toJson()).remove("error").apply()
         History.record(context, account, usage)
+        try {
+            Alerts.check(context, account, usage.settled(), reset(before.usage?.session, usage.session))
+        } catch (_: Exception) {
+            // A notification that fails must never cost the numbers.
+        }
 
         // Same rule as Clawd: the reset time moved forward and the percent dropped. The week
         // resetting counts too: after a maxed-out week that is the bigger relief.

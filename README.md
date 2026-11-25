@@ -92,7 +92,7 @@ He also moves along the scene as your session fills up, so his position shows yo
 ## Privacy and security
 
 - **Your password never goes into Pinch.** You only type it on claude.com, in your own browser.
-- **Pinch only talks to Anthropic.** It connects to `api.anthropic.com` for your usage, `platform.claude.com` for sign-in, and `status.claude.com` for the public status page. It has no server of its own, no ads and no tracking.
+- **Pinch only talks to Anthropic.** It connects to `api.anthropic.com` for your usage, `platform.claude.com` for sign-in, `status.claude.com` for the public status page, and `api.github.com` once a day to see whether a newer Pinch is out (you can turn that off; nothing about you is sent). It has no server of its own, no ads and no tracking.
 - **Your sign-in is encrypted on your phone.** The key is stored in the Android Keystore, and the token is never logged or backed up. **Sign out** (or **Remove**, with several accounts) deletes it, with that account's numbers and history.
 - **The sign-in steps are protected.** The sign-in page opens in your own browser. The code is hidden from screenshots and other apps. The clipboard is cleared after you connect.
 - **It asks for very few permissions:** internet access and network state.

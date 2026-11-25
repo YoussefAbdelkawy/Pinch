@@ -210,4 +210,38 @@ class CoreTest {
         // Nothing to go by: no check, rather than a wrong one.
         assertNull(dev.pinch.app.auth.ClaudeAuth.identity(JSONObject("""{"access_token":"x"}""")))
     }
+
+    @Test fun alertsWarnOncePerThresholdAndWindow() {
+        val w1 = 1_000L
+        assertNull(Alerts.warnFor(Limit("Session", 79, w1), null))
+        assertEquals(80, Alerts.warnFor(Limit("Session", 80, w1), null))
+        // Already said 80 for this window: quiet until 95.
+        assertNull(Alerts.warnFor(Limit("Session", 90, w1), "$w1:80"))
+        assertEquals(95, Alerts.warnFor(Limit("Session", 96, w1), "$w1:80"))
+        assertNull(Alerts.warnFor(Limit("Session", 100, w1), "$w1:95"))
+        // Jumping straight past both says the higher one only.
+        assertEquals(95, Alerts.warnFor(Limit("Session", 97, w1), null))
+        // A new window starts quiet again.
+        assertEquals(80, Alerts.warnFor(Limit("Session", 81, 2_000L), "$w1:95"))
+        assertNull(Alerts.warnFor(null, null))
+    }
+
+    @Test fun updateVersionsCompare() {
+        assertTrue(Updates.isNewer("1.4.0", "1.3.0"))
+        assertTrue(Updates.isNewer("1.10.0", "1.9.2"))
+        assertTrue(Updates.isNewer("2", "1.9.9"))
+        assertTrue(!Updates.isNewer("1.3.0", "1.3.0"))
+        assertTrue(!Updates.isNewer("1.3", "1.3.0"))
+        assertTrue(!Updates.isNewer("1.2.9", "1.3.0"))
+        assertTrue(!Updates.isNewer("1.3.0-beta", "1.3.0"))
+    }
+
+    @Test fun parsesLatestRelease() {
+        val ok = Updates.parse("""{"tag_name":"v1.4.0","html_url":"https://github.com/YoussefAbdelkawy/Pinch/releases/tag/v1.4.0","draft":false,"prerelease":false}""")
+        assertEquals("1.4.0", ok?.version)
+        // Only this repository's release pages are ever opened.
+        assertNull(Updates.parse("""{"tag_name":"v9.0.0","html_url":"https://evil.example/releases/tag/v9.0.0"}"""))
+        assertNull(Updates.parse("""{"tag_name":"v1.5.0","html_url":"https://github.com/YoussefAbdelkawy/Pinch/releases/tag/v1.5.0","prerelease":true}"""))
+        assertNull(Updates.parse("not json"))
+    }
 }

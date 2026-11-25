@@ -35,10 +35,12 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import dev.pinch.app.Accounts
+import dev.pinch.app.Alerts
 import dev.pinch.app.BuildConfig
 import dev.pinch.app.Haptics
 import dev.pinch.app.R
 import dev.pinch.app.Settings
+import dev.pinch.app.Updates
 import dev.pinch.app.art.Clawd
 import dev.pinch.app.art.Frame
 import dev.pinch.app.art.Pix
@@ -96,7 +98,14 @@ class MainActivity : Activity() {
         io.execute {
             RefreshWorker.schedule(app)
             ClawdWidget.updateAll(app)
+            // Sideloaded, so no store says when a new version is out: ask GitHub (once a day).
+            if (Updates.check(app)) main.post { if (!isFinishing && !busy) build() }
         }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQ_NOTIFY && !isFinishing) build()
     }
 
     /** A tap on a widget's "sign in again" opens the app on that account's tab. */
@@ -183,6 +192,11 @@ class MainActivity : Activity() {
         }, LinearLayout.LayoutParams(dp(40), dp(40)))
         col.addView(top, LinearLayout.LayoutParams(-1, dp(48)))
 
+        // A newer Pinch is out on GitHub.
+        Updates.available(this)?.let { release ->
+            col.addView(card { updateSection(it, release) }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
+        }
+
         // Several accounts, or one being added: a tab each, and the whole screen follows the tab.
         if (Accounts.multi(this) || adding != null) col.addView(accountTabs(adding), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) })
 
@@ -268,6 +282,10 @@ class MainActivity : Activity() {
                 }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
             }
         })
+
+        // Alerts.
+        col.addView(header(getString(R.string.alerts)))
+        col.addView(card { alertsSection(it) })
 
         if (!accountFirst) {
             col.addView(header(getString(R.string.account)))
@@ -414,6 +432,83 @@ class MainActivity : Activity() {
     // -------------------------------------------------------------- history ----
 
     private var historyMode = HistoryChart.Mode.DAY
+
+    // ---------------------------------------------------------- alerts, updates ----
+
+    private fun alertsSection(box: LinearLayout) {
+        val flow = FlowLayout(this, dp(8))
+        flow.addView(chip(getString(R.string.alerts_warn), theme.accent, Settings.alertsWarn(this), withDot = false) {
+            Settings.setAlertsWarn(this, !Settings.alertsWarn(this))
+            askToNotify()
+            build()
+        })
+        flow.addView(chip(getString(R.string.alerts_reset), theme.accent, Settings.alertsReset(this), withDot = false) {
+            Settings.setAlertsReset(this, !Settings.alertsReset(this))
+            askToNotify()
+            build()
+        })
+        box.addView(flow)
+        box.addView(text(getString(R.string.alerts_note), 13f, theme.muted).apply { setPadding(0, dp(12), 0, 0) })
+        if ((Settings.alertsWarn(this) || Settings.alertsReset(this)) && !Alerts.permitted(this)) {
+            box.addView(text(getString(R.string.alerts_permission), 13f, theme.muted).apply { setPadding(0, dp(10), 0, 0) })
+            box.addView(button(getString(R.string.alerts_allow), secondary = true) { askToNotify(fromButton = true) },
+                LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
+        }
+        // The update check lives here too: it is the other thing Pinch tells you about.
+        val updates = FlowLayout(this, dp(8))
+        updates.addView(chip(getString(R.string.updates_check), theme.accent, Settings.checkUpdates(this), withDot = false) {
+            val on = !Settings.checkUpdates(this)
+            Settings.setCheckUpdates(this, on)
+            if (on) {
+                val app = applicationContext
+                io.execute { if (Updates.check(app, force = true)) main.post { if (!isFinishing && !busy) build() } }
+            }
+            build()
+        })
+        box.addView(updates, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
+        box.addView(text(getString(R.string.updates_note), 13f, theme.muted).apply { setPadding(0, dp(12), 0, 0) })
+    }
+
+    /**
+     * Android 13+ needs the user's OK for notifications. Asked when an alert is turned on or
+     * the button is tapped, never on start. If Android stops showing its dialog (asked and
+     * refused twice), the button opens the app's notification settings instead.
+     */
+    private fun askToNotify(fromButton: Boolean = false) {
+        if (Build.VERSION.SDK_INT < 33 || Alerts.permitted(this)) return
+        if (!Settings.alertsWarn(this) && !Settings.alertsReset(this)) return
+        val perm = android.Manifest.permission.POST_NOTIFICATIONS
+        val asked = getSharedPreferences("alerts", Context.MODE_PRIVATE).getBoolean("asked", false)
+        if (fromButton && asked && !shouldShowRequestPermissionRationale(perm)) {
+            try {
+                startActivity(
+                    Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, packageName)
+                )
+            } catch (_: ActivityNotFoundException) {
+            }
+            return
+        }
+        getSharedPreferences("alerts", Context.MODE_PRIVATE).edit().putBoolean("asked", true).apply()
+        requestPermissions(arrayOf(perm), REQ_NOTIFY)
+    }
+
+    private fun updateSection(box: LinearLayout, release: Updates.Release) {
+        box.addView(text(getString(R.string.update_title, release.version), 16f, theme.textHi, bold = true))
+        box.addView(text(getString(R.string.update_note, BuildConfig.VERSION_NAME), 13f, theme.muted).apply { setPadding(0, dp(6), 0, 0) })
+        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        row.addView(button(getString(R.string.update_get)) {
+            if (release.url.startsWith(Updates.RELEASES_PREFIX)) try {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(release.url)))
+            } catch (_: ActivityNotFoundException) {
+            }
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        row.addView(button(getString(R.string.update_later), secondary = true) {
+            Updates.dismiss(this, release.version)
+            build()
+        }, LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = dp(8) })
+        box.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
+    }
 
     private fun historySection(box: LinearLayout) {
         val points = History.load(this, account)
@@ -789,6 +884,7 @@ class MainActivity : Activity() {
         Accounts.keep(this)
         ClaudeAuth.signOut(this, id)
         UsageRepo.clear(this, id)
+        Alerts.forget(this, id)
         History.clear(this, id)
         Settings.forgetLook(this, id)
         Accounts.remove(this, id)
@@ -917,5 +1013,6 @@ class MainActivity : Activity() {
     companion object {
         /** Opens the app on this account's tab (from a widget's "sign in again"). */
         const val EXTRA_ACCOUNT = "dev.pinch.app.extra.ACCOUNT"
+        private const val REQ_NOTIFY = 1
     }
 }
