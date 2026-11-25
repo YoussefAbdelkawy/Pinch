@@ -406,7 +406,11 @@ object WidgetRenderer {
             for (id in intArrayOf(R.id.title, R.id.plan, R.id.dots, R.id.badge)) v.setOnClickPendingIntent(id, next)
             if (k.kind == Kind.STRIP) v.setOnClickPendingIntent(R.id.left_text, next)
         }
-        v.setOnClickPendingIntent(R.id.refresh, WidgetActions.pending(context, WidgetActions.ACTION_REFRESH))
+        // The turning arrow takes taps too: while it shows, the plain arrow is hidden, and a
+        // widget left on it (a redraw that landed after the result) had a dead refresh button.
+        val refresh = WidgetActions.pending(context, WidgetActions.ACTION_REFRESH)
+        v.setOnClickPendingIntent(R.id.refresh, refresh)
+        v.setOnClickPendingIntent(R.id.refresh_nudge, refresh)
         if (k.kind == Kind.WIDE) v.setOnClickPendingIntent(
             R.id.stage,
             if (authProblem) open else WidgetActions.pending(context, WidgetActions.ACTION_TAP)
@@ -550,8 +554,10 @@ object WidgetRenderer {
     private fun updatedText(context: Context, state: UsageRepo.State): String {
         val at = state.usage?.fetchedAt ?: return ""
         val time = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(at))
-        val sameDay = Calendar.getInstance().apply { timeInMillis = at }.get(Calendar.DAY_OF_YEAR) ==
-            Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
+        val then = Calendar.getInstance().apply { timeInMillis = at }
+        val today = Calendar.getInstance()
+        val sameDay = then.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
+            then.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR)
         val stamp = if (sameDay) time else DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(at))
         return when (state.error) {
             null -> stamp
