@@ -147,7 +147,7 @@ class CoreTest {
     }
 
     @Test fun propsDrawForEveryFrame() {
-        for (id in listOf("chef", "programmer", "wizard", "detective")) {
+        for (id in listOf("chef", "programmer", "wizard", "detective", "bughunter")) {
             val skin = dev.pinch.app.art.Skin(id, id, Skins.CLASSIC.body, Skins.CLASSIC.eyes, emptyList())
             val bg = Scenes.background("beach", 120, 12)
             val beats = Stage.loop(Clawd.Mood.IDLE, 6, 30, 120, id)
@@ -162,7 +162,7 @@ class CoreTest {
 
     /** Loops must be seamless: full length, and the crab ends where he started, standing normally. */
     @Test fun loopsAreSeamless() {
-        for (skin in listOf("", "chef", "programmer", "wizard", "detective")) for (m in Clawd.Mood.values()) for (h in 0..6) for (w in intArrayOf(40, 90, 160)) for (pct in intArrayOf(0, 50, 100)) {
+        for (skin in listOf("", "chef", "programmer", "wizard", "detective", "bughunter")) for (m in Clawd.Mood.values()) for (h in 0..6) for (w in intArrayOf(40, 90, 160)) for (pct in intArrayOf(0, 50, 100)) {
             val home = Stage.home(w, pct)
             val b = Stage.loop(m, h, home, w, skin)
             assertEquals(Stage.LOOP, b.size)

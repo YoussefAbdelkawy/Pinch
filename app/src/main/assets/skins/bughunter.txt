@@ -1,0 +1,8 @@
+---
+name: Bug hunter
+top: -2
+k: #4D5B2A
+l: #6B7F3A
+---
+.....kkkkkkkk.....
+...llllllllllll...
