@@ -383,6 +383,8 @@ object WidgetRenderer {
         }
 
         // ---- several accounts: the name, the dots, or at the smallest sizes the account's letter
+        // The arrow lives in the header: its big touch area goes with it.
+        show(R.id.refresh_hit, headerShown)
         show(R.id.dots, page.multi && k.kind == Kind.WIDE && headerShown)
         show(R.id.badge, page.multi && !headerShown && k.kind != Kind.STRIP)
         if (page.multi) {
@@ -419,6 +421,7 @@ object WidgetRenderer {
         val refresh = WidgetActions.pending(context, WidgetActions.ACTION_REFRESH)
         v.setOnClickPendingIntent(R.id.refresh, refresh)
         v.setOnClickPendingIntent(R.id.refresh_nudge, refresh)
+        v.setOnClickPendingIntent(R.id.refresh_hit, refresh)
         if (k.kind == Kind.WIDE) v.setOnClickPendingIntent(
             R.id.stage,
             if (authProblem) open else WidgetActions.pending(context, WidgetActions.ACTION_TAP)
