@@ -241,7 +241,15 @@ object WidgetRenderer {
                 v.setTextViewText(R.id.left_text, context.getString(R.string.week_used_up))
             }
             session != null && numbers -> {
-                v.setTextViewText(R.id.pct, "${session.percent}%")
+                // A small muted "used" says which way the big number counts (it is not what is left).
+                val big = SpannableStringBuilder("${session.percent}%")
+                if (k.kind != Kind.MINI) {
+                    val at = big.length
+                    big.append(" ").append(context.getString(R.string.used))
+                    big.setSpan(android.text.style.RelativeSizeSpan(0.42f), at, big.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    big.setSpan(ForegroundColorSpan(theme.muted), at, big.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                v.setTextViewText(R.id.pct, big)
                 v.setTextColor(R.id.pct, when {
                     stale -> theme.muted
                     session.percent >= 85 -> levelColor(session.percent)

@@ -70,6 +70,10 @@ class MainActivity : Activity() {
     private var codeInput: EditText? = null
     private var widgetCount = -1
     private var scroll: ScrollView? = null
+    /** The open tab: usage, look or settings. */
+    private var tab = TAB_USAGE
+    /** Set when the tab changes, so the new tab opens at its top. */
+    private var toTop = false
     /** Which numbers the screen shows, so a refresh made elsewhere (the widget, the background) is noticed. */
     private var shown: String? = null
 
@@ -120,6 +124,7 @@ class MainActivity : Activity() {
         intent.removeExtra(EXTRA_ACCOUNT)
         if (id !in Accounts.list(this) || id == account) return false
         Accounts.setCurrent(this, id)
+        tab = TAB_USAGE
         return true
     }
 
@@ -208,88 +213,88 @@ class MainActivity : Activity() {
             return
         }
 
-        // Clawd on his scene.
-        val clawd = ClawdView(this).apply {
-            this.theme = this@MainActivity.theme
-            skin = Settings.skin(this@MainActivity, account, this@MainActivity.theme)
-            halves = state.usage?.heartHalves ?: 6
-            position = if (signedIn) state.usage?.session?.percent else null
-            mood = WidgetRenderer.moodOf(state, signedIn)
-            contentDescription = getString(R.string.clawd)
-            clipToOutline = true
-            background = rounded(theme.card, 16)
-        }
-        col.addView(clawd, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
-        col.addView(text(getString(R.string.tap_clawd), 12f, theme.muted).apply { setPadding(0, dp(6), 0, 0); gravity = Gravity.CENTER })
-
         // Signed out of this account: signing in again comes first (a widget's "sign in again" lands here).
         val accountFirst = !signedIn || state.usage == null || state.error == "auth_error"
-        if (signedIn && state.usage != null) {
-            if (accountFirst) {
+        if (accountFirst) tab = TAB_USAGE
+
+        // Three tabs keep the screen short: what Claude is doing now, how the crab looks, and settings.
+        if (!accountFirst) col.addView(screenTabs(), LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
+
+        when (tab) {
+            TAB_USAGE -> {
+                // Clawd on his scene.
+                val clawd = ClawdView(this).apply {
+                    this.theme = this@MainActivity.theme
+                    skin = Settings.skin(this@MainActivity, account, this@MainActivity.theme)
+                    halves = state.usage?.heartHalves ?: 6
+                    position = if (signedIn) state.usage?.session?.percent else null
+                    mood = WidgetRenderer.moodOf(state, signedIn)
+                    contentDescription = getString(R.string.clawd)
+                    clipToOutline = true
+                    background = rounded(theme.card, 16)
+                }
+                col.addView(clawd, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
+                col.addView(text(getString(R.string.tap_clawd), 12f, theme.muted).apply { setPadding(0, dp(6), 0, 0); gravity = Gravity.CENTER })
+                if (accountFirst) {
+                    // Not connected yet: signing in is the only thing that matters, so it comes first.
+                    col.addView(header(getString(R.string.account)))
+                    col.addView(card { accountSection(it, signedIn, state) })
+                }
+                if (signedIn && state.usage != null) {
+                    col.addView(header(getString(R.string.now)))
+                    col.addView(card { nowSection(it, state) })
+                    col.addView(header(getString(R.string.history)))
+                    col.addView(card { historySection(it) })
+                }
+                if (accountFirst) {
+                    col.addView(header(getString(R.string.widget)))
+                    col.addView(card { widgetSection(it, state, signedIn) })
+                }
+            }
+            TAB_LOOK -> {
+                // Live preview of the real widget, at the size picked.
+                col.addView(header(getString(R.string.widget)))
+                col.addView(card { widgetSection(it, state, signedIn) })
+                col.addView(header(getString(R.string.theme)))
+                col.addView(card { themeGrid(it) })
+                col.addView(header(getString(R.string.skin)))
+                col.addView(card { box -> skinGrid(box) })
+            }
+            else -> {
+                // Refresh interval.
+                col.addView(header(getString(R.string.refresh_every)))
+                col.addView(card { box ->
+                    val flow = FlowLayout(this, dp(8))
+                    val cur = Settings.intervalMinutes(this)
+                    for (m in intArrayOf(5, 15, 30, 60)) flow.addView(chip(getString(R.string.minutes, m), theme.accent, cur == m, withDot = false) {
+                        Settings.setIntervalMinutes(this, m)
+                        RefreshWorker.schedule(this, replace = true)
+                        build()
+                    })
+                    box.addView(flow)
+                    box.addView(text(getString(R.string.refresh_reset_note), 13f, theme.muted).apply { setPadding(0, dp(12), 0, 0) })
+                    // Battery optimisation (and Battery Saver on top of it) can hold background refreshes
+                    // back for an hour or more. "Unrestricted" lifts that; no permission needed to point there.
+                    if (!getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(packageName)) {
+                        box.addView(text(getString(R.string.battery_hint), 13f, theme.muted).apply { setPadding(0, dp(10), 0, 0) })
+                        box.addView(button(getString(R.string.battery_open), secondary = true) {
+                            try {
+                                startActivity(
+                                    Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))
+                                )
+                            } catch (_: ActivityNotFoundException) {
+                            }
+                        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
+                    }
+                })
+
+                // Alerts.
+                col.addView(header(getString(R.string.alerts)))
+                col.addView(card { alertsSection(it) })
+
                 col.addView(header(getString(R.string.account)))
                 col.addView(card { accountSection(it, signedIn, state) })
             }
-            col.addView(header(getString(R.string.now)))
-            col.addView(card { nowSection(it, state) })
-            col.addView(header(getString(R.string.history)))
-            col.addView(card { historySection(it) })
-        } else {
-            // Not connected yet: signing in is the only thing that matters, so it comes first.
-            col.addView(header(getString(R.string.account)))
-            col.addView(card { accountSection(it, signedIn, state) })
-        }
-
-        // Live preview of the real widget, at the size picked.
-        col.addView(header(getString(R.string.widget)))
-        col.addView(card { widgetSection(it, state, signedIn) })
-
-        // Look.
-        col.addView(header(getString(R.string.theme)))
-        col.addView(card { box ->
-            val flow = FlowLayout(this, dp(8))
-            val choice = Settings.themeChoice(this, account)
-            val seasonal = Themes.byId(Themes.seasonal(java.time.LocalDate.now()))
-            flow.addView(chip(getString(R.string.by_season, seasonal.name), seasonal.accent, choice == "auto") { setTheme("auto") })
-            for (t in Themes.ALL) flow.addView(chip(t.name, t.accent, choice == t.id) { setTheme(t.id) })
-            box.addView(flow)
-        })
-        col.addView(header(getString(R.string.skin)))
-        col.addView(card { box -> skinGrid(box) })
-
-        // Refresh interval.
-        col.addView(header(getString(R.string.refresh_every)))
-        col.addView(card { box ->
-            val flow = FlowLayout(this, dp(8))
-            val cur = Settings.intervalMinutes(this)
-            for (m in intArrayOf(5, 15, 30, 60)) flow.addView(chip(getString(R.string.minutes, m), theme.accent, cur == m) {
-                Settings.setIntervalMinutes(this, m)
-                RefreshWorker.schedule(this, replace = true)
-                build()
-            })
-            box.addView(flow)
-            box.addView(text(getString(R.string.refresh_reset_note), 13f, theme.muted).apply { setPadding(0, dp(12), 0, 0) })
-            // Battery optimisation (and Battery Saver on top of it) can hold background refreshes
-            // back for an hour or more. "Unrestricted" lifts that; no permission needed to point there.
-            if (!getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(packageName)) {
-                box.addView(text(getString(R.string.battery_hint), 13f, theme.muted).apply { setPadding(0, dp(10), 0, 0) })
-                box.addView(button(getString(R.string.battery_open), secondary = true) {
-                    try {
-                        startActivity(
-                            Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))
-                        )
-                    } catch (_: ActivityNotFoundException) {
-                    }
-                }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
-            }
-        })
-
-        // Alerts.
-        col.addView(header(getString(R.string.alerts)))
-        col.addView(card { alertsSection(it) })
-
-        if (!accountFirst) {
-            col.addView(header(getString(R.string.account)))
-            col.addView(card { accountSection(it, signedIn, state) })
         }
 
         finishBuild(col)
@@ -303,7 +308,8 @@ class MainActivity : Activity() {
         })
 
         // Rebuilt on every choice: keep the reader where they were instead of jumping to the top.
-        val keepY = scroll?.scrollY ?: 0
+        val keepY = if (toTop) 0 else scroll?.scrollY ?: 0
+        toTop = false
         val view = ScrollView(this).apply {
             setBackgroundColor(theme.bg)
             isFillViewport = true
@@ -406,6 +412,7 @@ class MainActivity : Activity() {
         if (state.error != null && state.error != "auth_error") {
             box.addView(text(errorText(state.error), 12f, Themes.WARN).apply { setPadding(0, dp(6), 0, 0) })
         }
+        box.addView(text(getString(R.string.hearts_hint), 12f, theme.muted).apply { setPadding(0, dp(10), 0, 0) })
     }
 
     private fun meter(pct: Int) = Meter(this).apply {
@@ -646,6 +653,85 @@ class MainActivity : Activity() {
     }
 
     /** One tab per account, the open one lit, then "+ Add" while there is room (or the new one being added). */
+    /** Usage, Look, Settings: a segmented bar, the open one lit. */
+    private fun screenTabs(): View {
+        val bar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            background = rounded(theme.card, 12)
+            setPadding(dp(3), dp(3), dp(3), dp(3))
+        }
+        for ((i, label) in listOf(R.string.tab_usage, R.string.tab_look, R.string.tab_settings).withIndex()) {
+            val on = i == tab
+            bar.addView(text(getString(label), 14f, if (on) theme.textHi else theme.muted, bold = true).apply {
+                gravity = Gravity.CENTER
+                maxLines = 1
+                minHeight = dp(40)
+                setPadding(dp(6), dp(9), dp(6), dp(9))
+                background = pressable(if (on) Pix.mix(theme.card, theme.accent, 0.3f) else theme.card, 10)
+                isSelected = on
+                setOnClickListener {
+                    if (tab != i) {
+                        Haptics.tick(this@MainActivity)
+                        tab = i
+                        toTop = true
+                        build()
+                    }
+                }
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+        }
+        return bar
+    }
+
+    /** Small cache of theme thumbnails: the scene with the theme's crab on it, as drawn on the widget. */
+    private val thumbs = HashMap<String, android.graphics.Bitmap>()
+
+    private fun themeThumb(t: Theme): android.graphics.Bitmap {
+        val hour = java.time.LocalTime.now().hour
+        return thumbs.getOrPut("${t.id}:${hour / 6}") {
+            val w = 72
+            val bg = Scenes.background(t.scene, w, hour)
+            val skin = Skins.get(this, t.skin)
+            dev.pinch.app.art.Stage.compose(bg, t.scene, hour, 0, dev.pinch.app.art.Stage.LOOP,
+                dev.pinch.app.art.Stage.Beat((w - Clawd.CANVAS_W) / 2, Frame()), skin).toBitmap(3)
+        }
+    }
+
+    /** Themes as little previews of their scene, so you see one before picking it. */
+    private fun themeGrid(box: LinearLayout) {
+        val flow = FlowLayout(this, dp(8))
+        val choice = Settings.themeChoice(this, account)
+        val seasonal = Themes.byId(Themes.seasonal(java.time.LocalDate.now()))
+        val cellW = (pxToDp(resources.displayMetrics.widthPixels) - 32 - 28 - 16) / 3
+        val items = listOf(Triple("auto", seasonal, getString(R.string.by_season, seasonal.name))) +
+            Themes.ALL.map { Triple(it.id, it, it.name) }
+        for ((id, t, name) in items) {
+            val on = id == choice
+            val cell = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(4), dp(4), dp(4), dp(6))
+                background = pressable(if (on) Pix.mix(theme.card, theme.accent, 0.25f) else theme.bg, 10, if (on) theme.accent else 0)
+                isSelected = on
+                contentDescription = name
+                setOnClickListener { setTheme(id) }
+            }
+            val img = ImageView(this).apply {
+                setImageBitmap(themeThumb(t))
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                clipToOutline = true
+                background = rounded(t.bg, 6)
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }
+            cell.addView(img, LinearLayout.LayoutParams(-1, dp((cellW - 8) * 30 / 72)))
+            cell.addView(text(name, 12f, if (on) theme.textHi else theme.text).apply {
+                maxLines = 2
+                setPadding(dp(2), dp(5), dp(2), 0)
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            })
+            flow.addView(cell, ViewGroup.LayoutParams(dp(cellW), -2))
+        }
+        box.addView(flow)
+    }
+
     private fun accountTabs(adding: String?): View {
         val tabs = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -723,31 +809,47 @@ class MainActivity : Activity() {
     }
 
     private fun skinGrid(box: LinearLayout) {
-        val flow = FlowLayout(this, dp(8))
         val account = account
         val choice = Settings.skinChoice(this, account)
         val sand = Scenes.sand(theme.scene)
         val cellW = (pxToDp(resources.displayMetrics.widthPixels) - 32 - 28 - 24) / 4
         val autoSkin = Skins.get(this, theme.skin)
-        val items = listOf("auto" to autoSkin) + Skins.all(this).map { it.key to it.value }
-        for ((id, skin) in items) {
-            val cell = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-                setPadding(dp(4), dp(8), dp(4), dp(6))
-                background = rounded(if (id == choice) Pix.mix(theme.card, theme.accent, 0.25f) else theme.bg, 10, if (id == choice) theme.accent else 0)
-                setOnClickListener { Settings.setSkinChoice(this@MainActivity, account, id); ClawdWidget.updateAll(this@MainActivity); build() }
+        val all = Skins.all(this).map { it.key to it.value }
+        // The ones with a routine of their own first, so they are easy to find.
+        val groups = listOf(
+            getString(R.string.skins_animated) to (listOf("auto" to autoSkin) + all.filter { dev.pinch.app.art.Props.hasRoutine(it.first) }),
+            getString(R.string.skins_other) to all.filterNot { dev.pinch.app.art.Props.hasRoutine(it.first) }
+        )
+        for ((g, pair) in groups.withIndex()) {
+            val (title, items) = pair
+            box.addView(text(title, 12f, theme.muted).apply { setPadding(dp(2), if (g == 0) 0 else dp(14), 0, dp(8)) })
+            val flow = FlowLayout(this, dp(8))
+            for ((id, skin) in items) {
+                val on = id == choice
+                val name = if (id == "auto") getString(R.string.skin_auto) else skin.name
+                val cell = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    setPadding(dp(4), dp(8), dp(4), dp(6))
+                    background = pressable(if (on) Pix.mix(theme.card, theme.accent, 0.25f) else theme.bg, 10, if (on) theme.accent else 0)
+                    isSelected = on
+                    contentDescription = name
+                    setOnClickListener { Settings.setSkinChoice(this@MainActivity, account, id); ClawdWidget.updateAll(this@MainActivity); build() }
+                }
+                val img = ImageView(this).apply {
+                    setImageBitmap(WidgetRenderer.crabBitmap(Frame(), skin, sand))
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                }
+                cell.addView(img, LinearLayout.LayoutParams(dp(cellW - 12), dp((cellW - 12) * 23 / 36)))
+                cell.addView(text(name, 11f, theme.text).apply {
+                    gravity = Gravity.CENTER; maxLines = 2
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                })
+                flow.addView(cell, ViewGroup.LayoutParams(dp(cellW), -2))
             }
-            val img = ImageView(this).apply {
-                setImageBitmap(WidgetRenderer.crabBitmap(Frame(), skin, sand))
-                scaleType = ImageView.ScaleType.FIT_CENTER
-            }
-            cell.addView(img, LinearLayout.LayoutParams(dp(cellW - 12), dp((cellW - 12) * 23 / 36)))
-            val name = if (id == "auto") getString(R.string.skin_auto) else skin.name
-            cell.addView(text(name, 11f, theme.text).apply { gravity = Gravity.CENTER; maxLines = 2 })
-            flow.addView(cell, ViewGroup.LayoutParams(dp(cellW), -2))
+            box.addView(flow)
         }
-        box.addView(flow)
     }
 
     // ----------------------------------------------------------------- actions ----
@@ -986,14 +1088,28 @@ class MainActivity : Activity() {
         text = if (withDot) "●  $label" else label
         textSize = 14f
         setTextColor(theme.text)
-        background = rounded(if (selected) Pix.mix(theme.card, theme.accent, 0.3f) else theme.bg, 18, if (selected) theme.accent else 0)
+        background = pressable(if (selected) Pix.mix(theme.card, theme.accent, 0.3f) else theme.bg, 18, if (selected) theme.accent else 0)
         setPadding(dp(12), dp(7), dp(14), dp(7))
+        minHeight = dp(36)
+        gravity = Gravity.CENTER_VERTICAL
         if (withDot) {
             val span = android.text.SpannableString(text)
             span.setSpan(android.text.style.ForegroundColorSpan(dot), 0, 1, 0)
             text = span
         }
+        // Read the label, not the dot, and say which one is picked.
+        contentDescription = label
+        isSelected = selected
         setOnClickListener { onClick() }
+    }
+
+    /** A rounded fill that shows a ripple when touched. */
+    private fun pressable(color: Int, radiusDp: Int, stroke: Int = 0): android.graphics.drawable.Drawable {
+        val shape = rounded(color, radiusDp, stroke)
+        val mask = rounded(0xFFFFFFFF.toInt(), radiusDp)
+        return android.graphics.drawable.RippleDrawable(
+            android.content.res.ColorStateList.valueOf(Pix.withAlpha(theme.textHi, 0.18f)), shape, mask
+        )
     }
 
     private fun rounded(color: Int, radiusDp: Int, stroke: Int = 0) = GradientDrawable().apply {
@@ -1014,5 +1130,7 @@ class MainActivity : Activity() {
         /** Opens the app on this account's tab (from a widget's "sign in again"). */
         const val EXTRA_ACCOUNT = "dev.pinch.app.extra.ACCOUNT"
         private const val REQ_NOTIFY = 1
+        private const val TAB_USAGE = 0
+        private const val TAB_LOOK = 1
     }
 }
