@@ -331,4 +331,13 @@
         android:letterSpacing="0.5"
         android:textSize="11sp"
         android:visibility="gone" />
+    <!-- The refresh button's real touch area: bigger than the arrow, and on top of everything,
+         so a tap near the arrow refreshes instead of falling through to "open the app" on the
+         card behind it. Shown with the header (code sets it). -->
+    <FrameLayout
+        android:id="@+id/refresh_hit"
+        android:layout_width="64dp"
+        android:layout_height="44dp"
+        android:layout_gravity="top|end"
+        android:contentDescription="@string/refresh" />
 </FrameLayout>
