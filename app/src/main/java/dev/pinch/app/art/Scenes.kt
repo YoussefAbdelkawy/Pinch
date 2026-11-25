@@ -23,6 +23,7 @@ object Scenes {
         "halloween" -> c("#3F2F52")
         "space" -> c("#6B7280")
         "cyberpunk" -> c("#334155")
+        "terminal" -> c("#3A3531")
         "spring" -> c("#65A30D")
         "oled" -> c("#27272A")
         "midnight" -> c("#1E3A5F")
@@ -158,6 +159,12 @@ object Scenes {
                 }
                 p.rect(0, gy, w, 1, c("#00E5FF"))
                 ground(p, r, c("#0F172A"), c("#1E293B"), top = 1)
+            }
+            "terminal" -> {
+                // A dark editor at night; the code itself scrolls in [fx].
+                p.rect(0, 0, w, gy, c("#141211"))
+                p.rect(0, gy, w, 1, c("#2C2724"))
+                ground(p, r, c("#1A1816"), c("#24211E"), top = 1)
             }
             "oled" -> {
                 // True black for OLED screens: almost every pixel stays off.
@@ -364,6 +371,27 @@ object Scenes {
                 if (!off) p.art(listOf(".c..ccc", "c.c..c.", "ccc..c.", "c.c..c.", "c.c.ccc"), m('c' to "#F0ABFC"), (w * 0.62).toInt(), 3)
                 val cx = across(0.0, w + 12.0, 1).toInt() - 6
                 p.art(listOf(".cccc.", "cyccyc", ".k..k."), m('c' to "#334155", 'y' to "#FDE047", 'k' to "#00E5FF"), cx, 10)
+            }
+            "terminal" -> {
+                // Lines of code scroll up, ten per loop: prompts, plain lines, added and removed lines,
+                // all dim so the crab stays the brightest thing. The cursor blinks on the last line.
+                val off = t * 10 / n
+                val rows = (gy - 2) / 4
+                for (k in 0 until rows) {
+                    val idx = (k + off) % 10
+                    val y = 2 + k * 4
+                    val kind = intArrayOf(0, 1, 1, 2, 0, 3, 1, 2, 3, 1)[idx]
+                    var x = 2
+                    if (kind == 0) { p.rect(x, y, 1, 3, c("#B0E07B53")); p.set(x + 1, y + 1, c("#B0E07B53")); x += 4 }
+                    val col = when (kind) { 2 -> c("#703FAE6A"); 3 -> c("#70D9534F"); else -> c("#705A544F") }
+                    if (kind >= 2) { p.rect(x, y + 1, 3, 1, col); if (kind == 2) p.rect(x + 1, y, 1, 3, col); x += 5 }
+                    for (s in 0 until 4) {
+                        val len = 4 + noise(idx * 7 + s, 5) % 12
+                        p.rect(x, y + 1, len, 1, col)
+                        x += len + 2
+                    }
+                    if (k == rows - 1 && (t / 5) % 2 == 0) p.rect(x, y, 2, 3, c("#E07B53"))
+                }
             }
             "oled" -> {
                 // A handful of stars breathing, and one shooting star per loop.
