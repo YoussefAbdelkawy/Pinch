@@ -160,10 +160,22 @@ class CoreTest {
         }
     }
 
+    /** On the widget he rests right of the big number but his idle trot crosses under it. */
+    @Test fun idleCrabRoamsTheWholeStage() {
+        val w = 136; val from = 38
+        for (pct in intArrayOf(0, 42, 100)) {
+            val home = Stage.home(w, pct, from)
+            assertTrue(home in from..Stage.maxX(w))
+            val xs = Stage.loop(Clawd.Mood.IDLE, 6, home, w).map { it.x }
+            assertTrue("$pct ${xs.min()}..${xs.max()}", xs.max() - xs.min() >= 60)
+            assertTrue("$pct reaches under the number", pct == 0 || xs.min() < from)
+        }
+    }
+
     /** Loops must be seamless: full length, and the crab ends where he started, standing normally. */
     @Test fun loopsAreSeamless() {
-        for (skin in listOf("", "chef", "programmer", "wizard", "detective", "bughunter")) for (m in Clawd.Mood.values()) for (h in 0..6) for (w in intArrayOf(40, 90, 160)) for (pct in intArrayOf(0, 50, 100)) {
-            val home = Stage.home(w, pct)
+        for (skin in listOf("", "chef", "programmer", "wizard", "detective", "bughunter")) for (m in Clawd.Mood.values()) for (h in 0..6) for (w in intArrayOf(40, 90, 160, 200)) for (pct in intArrayOf(0, 50, 100)) {
+            val home = Stage.home(w, pct, from = if (w >= 160) 38 else 0)
             val b = Stage.loop(m, h, home, w, skin)
             assertEquals(Stage.LOOP, b.size)
             assertEquals("$skin $m $h $w $pct", b.first().x, b.last().x)

@@ -26,10 +26,20 @@ object Stage {
     /** Furthest left edge of the crab's canvas that keeps him on stage. */
     fun maxX(w: Int) = max(0, w - Clawd.CANVAS_W)
 
-    /** Where he lives: further along the stage the more of the session is used. */
-    fun home(w: Int, sessionPct: Int?) = maxX(w) * (sessionPct ?: 15).coerceIn(0, 100) / 100
+    /**
+     * Where he lives: further along the stage the more of the session is used. [from] keeps his
+     * resting spot right of something drawn over the stage's left end (the widget's big number);
+     * he still walks the whole stage, that part included.
+     */
+    fun home(w: Int, sessionPct: Int?, from: Int = 0): Int {
+        val lo = from.coerceIn(0, maxX(w))
+        return lo + (maxX(w) - lo) * (sessionPct ?: 15).coerceIn(0, 100) / 100
+    }
 
     // ------------------------------------------------------------ choreography ----
+
+    /** Furthest the idle trot goes, in pixels; at two a frame, there and back fits the 120-frame loop. */
+    private const val IDLE_TROT = 88
 
     /** Walk cycle: legs alternate with a "both down" in between, so no leg ever blinks out. */
     private val STRIDE = listOf("both", "left", "both", "right")
@@ -73,14 +83,15 @@ object Stage {
                 b.fill(n) { t -> tired(t).copy(look = if ((t / 4) % 2 == 0) -1 else 1) }
             }
             Clawd.Mood.IDLE -> {
+                // A brisk trot to the far side of the stage and back: two pixels a frame.
                 val dir = b.roomyDir(w)
-                val d = min(14, b.room(w, dir))
+                val d = min(IDLE_TROT, b.room(w, dir))
                 val calm = { _: Int -> Frame() }
                 b.hold(6, Frame())
                 b.hold(1, Frame(eyes = "blink"))
                 b.hold(3, Frame())
                 b.hold(3, Frame(look = dir))
-                b.walk(dir * d, every = 1, base = calm)
+                b.walk(dir * d, every = 1, speed = 2, base = calm)
                 b.hold(3, Frame(look = dir))
                 b.hold(4, Frame(look = -dir))
                 b.hold(1, Frame(eyes = "blink"))
@@ -92,7 +103,7 @@ object Stage {
                     halves >= 3 -> for (k in 0 until 8) b.hold(1, Frame(eyes = "happy", arms = if ((k / 2) % 2 == 0) "right" else "down"))
                     else -> { b.hold(6, Frame(eyes = "yawn")); b.hold(1, Frame(eyes = "blink")) }
                 }
-                b.walk(-dir * d, every = 1, base = calm)
+                b.walk(-dir * d, every = 1, speed = 2, base = calm)
                 b.fill(n) { t ->
                     when (t % 12) {
                         5 -> Frame(eyes = "blink")
@@ -231,11 +242,13 @@ object Stage {
         fun hold(k: Int, f: Frame) = repeat(k) { out += Beat(x, f) }
         fun holdFn(k: Int, f: (Int) -> Frame) = repeat(k) { out += Beat(x, f(out.size)) }
 
-        /** Walks [dx] pixels, one pixel every [every] frames, facing the way he goes. */
-        fun walk(dx: Int, every: Int, base: (Int) -> Frame) {
+        /** Walks [dx] pixels, [speed] pixels every [every] frames, facing the way he goes. */
+        fun walk(dx: Int, every: Int, speed: Int = 1, base: (Int) -> Frame) {
             val dir = sign(dx.toFloat()).toInt()
-            for (s in 0 until abs(dx) * every) {
-                if (s % every == every - 1) x += dir
+            var left = abs(dx)
+            val steps = (left + speed - 1) / speed * every
+            for (s in 0 until steps) {
+                if (s % every == every - 1) { val m = min(speed, left); x += dir * m; left -= m }
                 val step = STRIDE[s % STRIDE.size] // a lifted leg never stays up two frames
                 out += Beat(x, base(out.size).copy(look = dir, feet = step))
             }
